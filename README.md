@@ -51,9 +51,9 @@ Tell Claude to remember your keys and it will use them automatically.
 
 ## Install
 
-1. Download a skill folder
-2. In Claude: Customize > Skills > + > Add a Skill > upload the SKILL.md file
-3. For skills with a reference companion, install both files
+1. Download and unzip a skill
+2. In Claude: Customize > Skills > + > Create skill > Upload a skill > drag in each SKILL.md file individually
+3. For skills with a reference companion, install both
 4. Ask a question naturally. Claude reads the instructions and makes the API call.
 
 ## License
