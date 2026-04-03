@@ -19,7 +19,11 @@ description: >
 
 # IGCE Builder: Cost-Reimbursement (CPFF / CPAF / CPIF)
 
-**Version 1.0** | March 2026
+**Version 1.1** | April 2026
+
+### Changelog
+- **v1.1** (April 2026): Added Step 2B — BLS wage aging factor. Wages are now aged forward from BLS data vintage (May 2024) to contract start date using the escalation rate, closing the ~2-year data lag gap that was understating base year costs.
+- **v1.0** (March 2026): Initial release.
 
 ## Overview
 
