@@ -1,8 +1,6 @@
 # 1102tools Claude Skills
 
-Free Claude Skills for federal contracting professionals and government contractors.
-
-All skills are free. All APIs are free.
+Claude Skills for federal contracting professionals. No subscriptions, no paywalls. Every skill in this collection uses a public federal API that's free to query.
 
 Website: [1102tools.com](https://1102tools.com)
 
