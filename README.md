@@ -6,6 +6,8 @@ All skills are free. All APIs are free.
 
 Website: [1102tools.com](https://1102tools.com)
 
+> **Before you build:** Not every acquisition capability should be an AI tool. Dozens of potential skills were evaluated and several were intentionally excluded. Some are planned and coming. Others will never be built because they cross the line from data assembly into professional judgment -- the kind of output that would not survive a protest, would not be adopted by the workforce, and would not be worth the time to develop. Read **[AI-BOUNDARIES.md](AI-BOUNDARIES.md)** for the full reasoning. It will save you development time and your users the backlash.
+
 ## Skills
 
 ### API Data Sources
@@ -58,6 +60,10 @@ Tell Claude to remember your keys and it will use them automatically.
 2. In Claude: Customize > Skills > + > Create skill > Upload a skill > drag in each SKILL.md file individually
 3. For skills with a reference companion, install both
 4. Ask a question naturally. Claude reads the instructions and makes the API call.
+
+## What's Not Here
+
+If you're looking for a capability that doesn't exist in this collection, there are two possible reasons: it's planned, or it was evaluated and deliberately excluded. Proposal scoring, best value tradeoff analysis, responsibility determinations, negotiation strategy, OCI analysis, and several other capabilities were considered and rejected because they require warrant-level judgment that AI cannot replicate and the acquisition workforce will not accept. See **[AI-BOUNDARIES.md](AI-BOUNDARIES.md)** for the complete list and the reasoning behind each decision.
 
 ## License
 
