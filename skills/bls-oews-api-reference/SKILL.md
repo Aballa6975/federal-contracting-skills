@@ -39,8 +39,8 @@ def get_wage_profile(occ_code, prefix="OEUN", area="0000000", industry="000000")
     return profile
 
 # National: get_wage_profile("151252")
-# San Antonio: get_wage_profile("151252", prefix="OEUM", area="0041700")
-# Texas: get_wage_profile("151252", prefix="OEUS", area="4800000")
+# Seattle: get_wage_profile("151252", prefix="OEUM", area="0042660")
+# Virginia: get_wage_profile("151252", prefix="OEUS", area="5100000")
 # Federal govt national: get_wage_profile("151252", industry="999100")
 ```
 
@@ -53,7 +53,7 @@ def compare_metros(occ_code, metro_codes, datatype="04"):
                   for area in metro_codes]
     return parse_oes_results(query_bls(series_ids))
 
-# metros = {"0047900": "DC", "0041700": "San Antonio", "0012580": "Baltimore"}
+# metros = {"0047900": "DC", "0042660": "Seattle", "0012580": "Baltimore"}
 ```
 
 ### Compare Multiple Occupations in One Location
@@ -170,12 +170,12 @@ occupations = {
     "151232": "Help Desk Specialist", "151244": "Network Administrator",
 }
 datatypes = ["04", "11", "13", "15"]
-sa_metro = "0041700"
+target_metro = "0042660"
 
 all_series = []
 for occ in occupations:
     for dt in datatypes:
-        all_series.append(build_oes_series_id("OEUM", sa_metro, "000000", occ, dt))
+        all_series.append(build_oes_series_id("OEUM", target_metro, "000000", occ, dt))
 
 response = query_bls(all_series, key=BLS_API_KEY)
 
@@ -185,13 +185,13 @@ for s in response['Results']['series']:
         data_year = s['data'][0]['year']
         break
 
-print(f"=== IGCE Market Wage Research: San Antonio Metro ===")
+print(f"=== IGCE Market Wage Research: Seattle Metro ===")
 print(f"    Source: BLS OEWS, May {data_year}\n")
 
 for occ_code, title in occupations.items():
     print(f"  {title} (SOC {occ_code[:2]}-{occ_code[2:]}):")
     for dt in datatypes:
-        sid = build_oes_series_id("OEUM", sa_metro, "000000", occ_code, dt)
+        sid = build_oes_series_id("OEUM", target_metro, "000000", occ_code, dt)
         for s in response['Results']['series']:
             if s['seriesID'] == sid and s['data']:
                 entry = s['data'][0]
@@ -235,7 +235,7 @@ for occ_code, title in occupations.items():
 0012420=Austin   0012580=Baltimore  0014460=Boston   0016980=Chicago
 0017140=Cincinnati  0019100=Dallas  0026420=Houston  0031080=LA
 0033100=Miami  0033460=Minneapolis  0035380=New Orleans  0035620=NYC
-0037980=Philadelphia  0038060=Phoenix  0040140=Riverside  0041700=San Antonio
+0037980=Philadelphia  0038060=Phoenix  0040140=Riverside  0019820=Detroit
 0041740=San Diego  0041860=San Francisco  0042660=Seattle  0047900=DC
 0045300=Tampa
 ```

@@ -68,7 +68,7 @@ When the user provides an existing SOO:
    - ✅ Typically present in SOO: background, high-level objectives, constraints, PoP, location
    - ❌ Typically missing from SOO: task decomposition, staffing, deliverables with acceptance criteria, CLIN structure, QASP metrics, reporting cadence, transition details
 
-3. **Decision bridge.** Present the gaps as the questions Phase 1 will answer. Frame it as: "The SOO tells us what FDA wants to achieve. Phase 1 asks the questions that turn objectives into executable requirements."
+3. **Decision bridge.** Present the gaps as the questions Phase 1 will answer. Frame it as: "The SOO tells us what the agency wants to achieve. Phase 1 asks the questions that turn objectives into executable requirements."
 
 4. **Carry forward.** Pre-populate Phase 1 answers with anything the SOO already decided (location, PoP, known constraints). Don't re-ask settled questions.
 

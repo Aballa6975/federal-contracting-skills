@@ -431,13 +431,13 @@ Claude will: run full labor sequence plus Step 5B for materials, collect specifi
 **SOW-driven:** "Here's my SOW, build me an IGCE" [user pastes or uploads SOW]
 Claude will: run Step 0 decomposition, validate, determine LH vs. T&M based on materials need, then run appropriate workflow.
 
-**With travel:** "IGCE for a 5-person IT team in DC with monthly travel to San Antonio, base plus 4 OYs"
+**With travel:** "IGCE for a 5-person IT team in DC with monthly travel to Seattle, base plus 4 OYs"
 Claude will: ask for labor breakdown, run Steps 1-8 including City Pair lookup for DCA-SAT.
 
 **Rate validation:** "Vendor proposes $165/hr for a Software Dev in DC. Reasonable?"
 Claude will: Workflow B. Pull CALC+ distribution, position $165, optionally BLS context, produce validation summary.
 
-**Multi-location:** "Price a 10-person help desk split between San Antonio and Houston, quarterly travel to DC"
+**Multi-location:** "Price a 10-person help desk split between Baltimore and Philadelphia, quarterly travel to DC"
 Claude will: ask which approach (highest/weighted/separate), pull BLS for both metros, produce combined IGCE.
 
 **Partial year:** "IGCE for a contract starting April 1, base year is 6 months, then 4 full OYs"

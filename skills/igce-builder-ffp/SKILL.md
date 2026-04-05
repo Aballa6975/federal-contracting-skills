@@ -428,13 +428,13 @@ Claude will: map to SOC codes, pull DC BLS wages, build layered wrap rates at lo
 **SOW-driven:** "Here's my PWS, I need an FFP cost estimate" [user uploads PWS]
 Claude will: run Step 0 decomposition, validate with user, then full Workflow A with FFP buildup.
 
-**With travel:** "FFP IGCE for 5-person IT team in DC, monthly travel to San Antonio, base plus 4 OYs"
+**With travel:** "FFP IGCE for 5-person IT team in DC, monthly travel to Seattle, base plus 4 OYs"
 Claude will: ask for labor breakdown, run Steps 1-8 including City Pair lookup for DCA-SAT.
 
 **Rate validation:** "Vendor proposes $185/hr for a Software Dev, FFP contract. Reasonable?"
 Claude will: Workflow B. Pull CALC+ distribution, run BLS wrap rate buildup for context, position $185 within both, produce validation summary.
 
-**Multi-location:** "FFP IGCE for 10-person help desk split between San Antonio and Houston, quarterly travel to DC"
+**Multi-location:** "FFP IGCE for 10-person help desk split between Baltimore and Philadelphia, quarterly travel to DC"
 Claude will: ask which multi-location approach, pull BLS for both metros, calculate travel for DC, produce combined workbook with scenario analysis.
 
 **Custom rates:** "Use 35% fringe, 95% overhead, 15% G&A, 12% profit for a cleared environment"

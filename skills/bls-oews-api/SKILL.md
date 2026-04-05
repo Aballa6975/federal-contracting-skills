@@ -47,8 +47,8 @@ def quick_wage_lookup(occ_code, prefix="OEUN", area="0000000"):
                 results[datatypes[dt]] = f"${int(float(val)):,}"
     return results
 
-# Example: Software Developers in San Antonio
-# print(quick_wage_lookup("151252", prefix="OEUM", area="0041700"))
+# Example: Software Developers in Seattle
+# print(quick_wage_lookup("151252", prefix="OEUM", area="0042660"))
 ```
 
 ---
@@ -89,12 +89,12 @@ Example:   OEUN    0000000   000000     151252     13
 | Prefix | Scope | Area Code |
 |--------|-------|-----------|
 | `OEUN` | National | `0000000` |
-| `OEUS` | State | FIPS + `00000` (e.g., `4800000` = TX) |
-| `OEUM` | Metro | `00` + MSA (e.g., `0041700` = San Antonio) |
+| `OEUS` | State | FIPS + `00000` (e.g., `5100000` = VA) |
+| `OEUM` | Metro | `00` + MSA (e.g., `0042660` = Seattle) |
 
 ### Common Area Codes
 **States:** `0600000`=CA, `1100000`=DC, `2400000`=MD, `4800000`=TX, `5100000`=VA
-**Metros:** `0047900`=DC, `0041700`=San Antonio, `0012580`=Baltimore, `0026420`=Houston, `0019100`=Dallas, `0035620`=NYC, `0031080`=LA, `0042660`=Seattle, `0041860`=SF
+**Metros:** `0047900`=DC, `0042660`=Seattle, `0012580`=Baltimore, `0037980`=Philadelphia, `0035620`=NYC, `0031080`=LA, `0041860`=SF, `0038060`=Phoenix
 
 ### INDUSTRY (6 chars)
 `000000` = all industries (default). Industry-specific estimates are **national only** (`OEUN`). Common: `541000`=Prof services, `541500`=Computer systems, `999100`=Federal govt. 2-digit NAICS codes do NOT work.

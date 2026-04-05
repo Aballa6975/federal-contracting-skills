@@ -79,7 +79,7 @@ Agency-scoped searches often return thin results while government-wide searches 
 
 **Agency scope** (for relevance): Sections 4 (Prior Awards), vendor landscape detail. If the user specifies an agency, use it here to show directly comparable awards.
 
-Label every section's scope explicitly in the DOCX: "(Government-Wide)" or "(FDA)" etc. This transparency is essential for the contract file.
+Label every section's scope explicitly in the DOCX: "(Government-Wide)" or "(NAVSEA)" etc. This transparency is essential for the contract file.
 
 If the agency-scoped search returns fewer than 20 awards, note this limitation and recommend supplementing with government-wide data for statistical conclusions.
 
@@ -577,9 +577,9 @@ USASpending FPDS data is typically 1 business day behind. Note the retrieval dat
 
 Claude will: validate 541512, build government-wide 5-year filters, run count-based analysis for contract type/competition/SB, pull agency-scoped prior awards, generate DOCX with full FAR Part 10 analysis.
 
-**Scoped:** "Market research for cybersecurity services, NAICS 541512, PSC D399, FDA only, last 3 years, $500K-$5M"
+**Scoped:** "Market research for cybersecurity services, NAICS 541512, PSC D399, NAVSEA only, last 3 years, $500K-$5M"
 
-Claude will: validate codes, build dual-scope filters, run all pulls. Note if the FDA-scoped results are thin and supplement with gov-wide context.
+Claude will: validate codes, build dual-scope filters, run all pulls. Note if the agency-scoped results are thin and supplement with gov-wide context.
 
 **With set-aside interest:** "Market research for NAICS 541519, interested in small business set-aside"
 

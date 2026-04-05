@@ -306,7 +306,7 @@ sam_entity({
 # Exclusion: Check if a vendor is excluded
 sam_exclusions({"ueiSAM": "E1K4E4A29SU5"})
 
-# Exclusion: Search excluded firms in Texas
+# Exclusion: Search excluded firms in Virginia
 sam_exclusions({"classification": "Firm", "stateProvince": "TX"})
 
 # Exclusion: Recent exclusion actions
@@ -349,7 +349,7 @@ r = sam_opportunities({
     "limit": "100"
 })
 hhs_opps = [o for o in r.get("opportunitiesData", [])
-            if "HEALTH AND HUMAN SERVICES" in o.get("fullParentPathName", "").upper()]
+            if "DEFENSE" in o.get("fullParentPathName", "").upper()]
 
 # Opportunities: Specific solicitation number (date range max 364 days)
 sam_opportunities({

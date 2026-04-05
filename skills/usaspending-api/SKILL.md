@@ -35,11 +35,11 @@ Award type codes MUST NOT be mixed across groups. The API returns HTTP 422 if yo
 - **Other:** `["09", "11", "-1"]`
 
 ### 2. PIID Type Detection
-For FDA-format PIIDs (75F401XXTYYYYY), position 8 indicates type: C=Contract, D=IDV, F=Task Order. Non-FDA PIIDs vary; try contracts first, then IDVs if 0 results.
+PIID formats vary by agency. Example: NAVSEA PIIDs start with N00024 (e.g., N0002425CXXXX). Other DoD prefixes: W91CRB (Army Contracting Command), FA8650 (AFRL). If the agency format is unknown, try contracts first, then IDVs if 0 results.
 
 ```python
 def detect_award_type(piid):
-    if piid.startswith("75F401") and len(piid) >= 9:
+    if piid.startswith("N00024") and len(piid) >= 9:
         return ["IDV_B_B"] if piid[8] == 'D' else ["A", "B", "C", "D"]
     return ["A", "B", "C", "D"]
 ```
@@ -103,7 +103,7 @@ def search_awards(keywords, award_type_codes, fields=None, limit=10, page=1, sor
 
 **Loan fields:** Use "Loan Value" and "Subsidy Cost" instead of "Award Amount". Sort by "Loan Value".
 
-**Note on `award_ids` filter:** Use plain strings: `"award_ids": ["75F40120C00085"]`. Performs prefix match.
+**Note on `award_ids` filter:** Use plain strings: `"award_ids": ["N0002424C0085"]`. Performs prefix match.
 
 ### 2. Award Detail
 
@@ -144,13 +144,13 @@ Returns per transaction: id, type, action_date, action_type, modification_number
 filters = {
     "award_type_codes": ["A", "B", "C", "D"],
     "agencies": [{"type": "awarding", "tier": "subtier",
-                  "name": "Food and Drug Administration",
-                  "toptier_name": "Department of Health and Human Services"}],
+                  "name": "Naval Sea Systems Command",
+                  "toptier_name": "Department of Defense"}],
     "time_period": [{"start_date": "2024-10-01", "end_date": "2025-09-30"}]
 }
 ```
 
-FDA constants: toptier code 075, subtier code 7524, PIID format 75F401[YY][type][NNNNN].
+DoD constants: toptier code 097 (Defense). Navy subtier 1700. Example NAVSEA PIID format N00024[YY][type][NNNN].
 
 ### 5. IDV Child Awards
 

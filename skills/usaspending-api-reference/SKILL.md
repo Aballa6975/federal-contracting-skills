@@ -14,7 +14,7 @@ Supplemental reference for the USASpending API skill. Load on demand when you ne
 4. Loan Search
 5. Award Funding (File C)
 6. Reference Endpoints
-7. PSC Code Reference (Common FDA Codes)
+7. PSC Code Reference (Common IT/Services Codes)
 8. Vendor Deduplication Notes
 9. Troubleshooting
 
@@ -250,7 +250,7 @@ Sort fields: reporting_fiscal_date, account_title, transaction_obligated_amount,
 
 ---
 
-## 7. PSC Code Reference (Common FDA Codes)
+## 7. PSC Code Reference (Common IT/Services Codes)
 
 | Code | Description |
 |------|-------------|

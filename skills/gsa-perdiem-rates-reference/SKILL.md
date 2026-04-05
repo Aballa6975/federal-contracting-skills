@@ -25,18 +25,18 @@ description: >
 ```json
 {"rates": [{"rate": [{"months": {"month": [
     {"value": 137, "number": 1, "short": "Jan", "long": "January"}]},
-  "meals": 74, "county": "Bexar", "city": "San Antonio", "standardRate": "false"}],
-  "state": "TX", "year": 2026}]}
+  "meals": 74, "county": "Baltimore city", "city": "Baltimore", "standardRate": "false"}],
+  "state": "MD", "year": 2026}]}
 ```
 
 ### Bulk Lodging (Endpoint 4)
-Values are **strings**: `{"Jan": "137", "Meals": "74", "City": "San Antonio", "State": "TX", "County": "Bexar", "DID": "356"}`
+Values are **strings**: `{"Jan": "137", "Meals": "74", "City": "Baltimore", "State": "MD", "County": "Baltimore city", "DID": "356"}`
 
 ### M&IE Breakdown (Endpoint 5)
 `[{"total": 68, "breakfast": 16, "lunch": 19, "dinner": 28, "incidental": 5, "FirstLastDay": 51}]`
 
 ### ZIP Mapping (Endpoint 6)
-`[{"Zip": "78254", "DID": "0", "ST": "TX"}]` (DID "0" = standard rate)
+`[{"Zip": "21201", "DID": "0", "ST": "MD"}]` (DID "0" = standard rate)
 
 ---
 
@@ -200,7 +200,7 @@ Verified against live API March 2026. **Goes stale each August; query API for ex
 | Fort Worth | Arlington / Fort Worth / Grapevine | $181 (flat) | $80 | $261 |
 | Austin | Austin | $173-$187 | $80 | $267 |
 | Baltimore | Baltimore City | $150 (flat) | $86 | $236 |
-| San Antonio | San Antonio | $137-$161 | $74 | $235 |
+| Baltimore | Baltimore | $137-$161 | $74 | $235 |
 | Houston | Houston | $128 (flat) | $80 | $208 |
 | Standard Rate | Standard Rate | $110 (flat) | $68 | $178 |
 
