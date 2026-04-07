@@ -1,5 +1,5 @@
 ---
-name: grant-budget-builder
+name: grants-builder
 description: >
   Build federal grant budget estimates aligned to 2 CFR 200 (Uniform
   Guidance) and SF-424A format by orchestrating BLS OEWS and GSA Per
@@ -18,7 +18,7 @@ description: >
   estimates). Requires BLS OEWS API and GSA Per Diem Rates API skills.
 ---
 
-# Grant Budget Builder
+# Grants Builder
 
 **Version 1.0** | March 2026
 
