@@ -306,4 +306,4 @@ def get_far_definition(term, date=None):
 
 ---
 
-*MIT © 2026 James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
+*MIT © James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*

@@ -17,21 +17,12 @@ description: >
 
 # Market Research Builder Skill
 
-**Version 1.3** | March 2026
-
-| Version | Date | Change |
-|---------|------|--------|
-| 1.0 | Mar 2026 | Initial release: full FAR Part 10 report orchestration with dual-scope strategy, 10-section DOCX output |
-| 1.1 | Mar 2026 | Fixed award distribution stats to note sample bias. Added partial-FY labeling for lookback start. Added vendor entity dedup warning. Added VSA to SB breakdown. Clarified prior award table column guidance and cover page layout. |
-| 1.2 | Mar 2026 | Fixed fiscal_year string type coercion in Step 8 (caused broken partial-FY labels, wrong YoY, wrong market characterization). Switched prior award table to landscape orientation. Added vendor dedup detection logic. Strengthened market characterization logic to exclude both partial FYs. Added TOC update-fields note. Fixed market concentration denominator description. |
-| 1.3 | Mar 2026 | Removed empty Notes column from vendor, SB, competition, and contract type tables (kept in trend table only). Renamed "SB Total Set-Aside" to "Small Business (SBA/SBP)" for clarity. Added column character limits for prior award landscape table. Added footer re-definition guidance for section breaks. Added SB vendor identification technique for Rule of Two. Scoped Appendix A to base filter objects. Added rebrand/acquisition limitation to vendor dedup. |
-
 ## Overview
 
 This skill orchestrates the USASpending API skill to produce FAR Part 10 market research reports as DOCX files suitable for the contract file. It contains no API code of its own. It tells Claude what to pull from USASpending, in what order, and how to synthesize the data into a structured market research report with findings and recommendations.
 
 **Required skill (must be installed):**
-1. **USASpending API (v1.5+)**: federal award data by NAICS, PSC, agency, vendor, and keyword
+1. **USASpending API**: federal award data by NAICS, PSC, agency, vendor, and keyword
 
 **Required API keys:** None. USASpending is free, no-auth.
 
@@ -601,4 +592,4 @@ Note in the methodology section:
 
 ---
 
-*MIT © 2026 James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
+*MIT © James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*

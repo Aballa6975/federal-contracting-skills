@@ -3,12 +3,7 @@ name: ecfr-api
 description: Query the eCFR (Electronic Code of Federal Regulations) API for current and historical regulatory text, structure, and version history. Use when the user asks about CFR text, FAR clauses, DFARS provisions, agency FAR supplements, regulatory definitions, clause lookups, point-in-time comparisons, version history, or CFR hierarchy. Trigger for any mention of eCFR, CFR, Code of Federal Regulations, FAR text, DFARS text, clause lookup, regulatory text, CFR title/part/section, or specific citations (e.g., 48 CFR 15.305, FAR 52.212-4, DFARS 252.227-7014). Also trigger when the user needs to read a FAR/DFARS clause, list sections in a part, compare regulation text across dates, check amendment dates, or find definitions. Complements the Federal Register skill (what is changing) by showing what regulations currently say and what they said historically.
 ---
 
-# eCFR (Electronic Code of Federal Regulations) API Skill (v1.2)
-
-## Changelog
-- v1.2: Refactored for efficiency; moved response schemas, composite workflows, reference tables, and troubleshooting to REFERENCE.md
-- v1.1: Added XML hierarchy_metadata extraction, NARA shutdown note, composite workflows, FAR chapter map
-- v1.0: Initial release
+# eCFR (Electronic Code of Federal Regulations) API Skill
 
 ## Overview
 
@@ -51,7 +46,7 @@ Title 48: Chapter 1 = FAR (Parts 1-99), Chapter 2 = DFARS (Parts 200-299). Full 
 Use part or subpart filters. Section-level filtering returns HTTP 400.
 
 ### 8. RFO Deviation Awareness
-As of late 2025, many agencies are adopting RFO (Revolutionary FAR Overhaul) deviations that supersede codified FAR text for those agencies. The eCFR still shows the pre-RFO text. When citing FAR sections for specific contract actions, check whether the awarding agency adopted an RFO deviation for that Part before the award date. Agency adoption status: https://www.acquisition.gov/far-overhaul/far-part-deviation-guide
+Many agencies have issued RFO (Revolutionary FAR Overhaul) class deviations that supersede codified FAR text for those agencies. The eCFR still shows the pre-RFO text. When citing FAR sections for a specific agency's contract action, check whether that agency has adopted an RFO deviation for the relevant Part before relying on codified text. Current agency adoption status: https://www.acquisition.gov/far-overhaul/far-part-deviation-guide
 
 ---
 
@@ -285,4 +280,4 @@ For response schemas, composite workflows (compare versions, list sections, find
 
 ---
 
-*MIT © 2026 James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
+*MIT © James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*

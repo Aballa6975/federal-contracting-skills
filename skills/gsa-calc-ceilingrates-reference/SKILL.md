@@ -229,4 +229,4 @@ def paginate_all(keyword, filters=None, page_size=500):
 
 ---
 
-*MIT © 2026 James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
+*MIT © James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*

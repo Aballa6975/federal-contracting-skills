@@ -4,13 +4,7 @@ description: >
   Query the BLS Occupational Employment and Wage Statistics (OEWS) API for market wage data by occupation, geography, and industry. Trigger for any mention of BLS, Bureau of Labor Statistics, OEWS, OES, occupational wages, market wages, salary data, wage percentiles, median wage, mean wage, labor market rates, SOC codes, or geographic wage differentials. Also trigger when the user needs to compare wages across metro areas, benchmark contractor labor rates against market data, support IGCE development with market wage research, or validate price proposals against BLS data. Complements the GSA CALC+ skill (ceiling rates from awarded contracts) by providing independent market wage data from employer surveys. Together they form a complete pricing toolkit - BLS OEWS for what the market pays, CALC+ for what GSA contractors charge.
 ---
 
-# BLS OEWS API Skill v1.3
-
-## Changelog
-- v1.3: Refactored for efficiency; moved query recipes, SOC table, IGCE workflow, BLS vs CALC+ comparison, error handling to REFERENCE.md
-- v1.2: Added detect_oews_year() auto-detect helper
-- v1.1: Major bugfix: area code builder, special value handling, year default, wage cap docs
-- v1.0: Initial release
+# BLS OEWS API Skill
 
 ## Quick Start: One Occupation, One Location
 
@@ -237,4 +231,4 @@ For query recipes (wage profile, metro comparison, multi-occupation, industry-sp
 
 ---
 
-*MIT © 2026 James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
+*MIT © James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*

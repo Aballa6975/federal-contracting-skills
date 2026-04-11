@@ -19,12 +19,6 @@ description: >
 
 # IGCE Builder: Cost-Reimbursement (CPFF / CPAF / CPIF)
 
-**Version 1.1** | April 2026
-
-### Changelog
-- **v1.1** (April 2026): Added Step 2B — BLS wage aging factor. Wages are now aged forward from BLS data vintage (May 2024) to contract start date using the escalation rate, closing the ~2-year data lag gap that was understating base year costs.
-- **v1.0** (March 2026): Initial release.
-
 ## Overview
 
 This skill produces Independent Government Cost Estimates for cost-reimbursement contracts. CR contracts reimburse the contractor for allowable costs incurred plus a fee. The cost buildup is structurally similar to FFP (layered cost pools: fringe, overhead, G&A), but instead of profit-as-markup, CR contracts use a negotiated fee that varies by subtype. The IGCE estimates what those allowable costs should be and what fee structure is appropriate.
@@ -103,7 +97,7 @@ Ask for everything in a single pass. Provide defaults where noted.
 | Travel duration | None | Nights per trip |
 | Number of travelers | All staff | Travelers per trip |
 | Travel months | Max monthly rate | Specific months if known |
-| FY for per diem | Current FY | FY2026 as of March 2026 |
+| FY for per diem | Current federal FY | Compute at build time (Oct-Sep cycle) |
 | Duty station / origin | Performance location | For City Pair airfare lookup |
 | NAICS code | None | Include in output if provided |
 | PSC code | None | Include in output if provided |
@@ -204,9 +198,9 @@ aging_factor = (1 + escalation_rate) ^ (months_gap / 12)
 aged_annual_wage = annual_median * aging_factor
 ```
 
-Example: BLS data from May 2024, contract starts October 2026 = 29 months gap. At 2.5% escalation: aging_factor = 1.025^(29/12) = ~1.061. A $100,000 BLS median becomes $106,100 before cost pool buildup.
+Example: if the contract start is 29 months after the BLS data vintage, at 2.5% escalation the aging_factor = 1.025^(29/12) = ~1.061. A $100,000 BLS median becomes $106,100 before cost pool buildup.
 
-Use the aged wage as the basis for all subsequent calculations. Document the aging adjustment in the Methodology sheet: "BLS OEWS May 2024 wages aged forward [X] months to [contract start] at [escalation rate]%/yr to account for data lag."
+Use the aged wage as the basis for all subsequent calculations. Document the aging adjustment in the Methodology sheet: "BLS OEWS wages (data vintage: [BLS_vintage]) aged forward [X] months to [contract start] at [escalation rate]%/yr to account for data lag."
 
 If the user does not provide a contract start date, ask for one. If unknown, default to 6 months from today and note the assumption.
 
@@ -410,7 +404,7 @@ For CPIF: rows for target fee, overrun/underrun scenarios with share ratio, min/
 
 **Sheet 5: Travel Detail.** Formula-driven per destination:
 ```
-Row 3: A="Fiscal Year"           B=2026                          (blue font)
+Row 3: A="Fiscal Year"           B=<current federal FY>          (blue font)
 Row 4: A="Nightly Lodging Rate"  B=[max monthly]                 (blue font)
 Row 5: A="M&IE Daily Rate"       B=[rate]                        (blue font)
 Row 6: A="First/Last Day M&IE"   B==B5*0.75                      (formula)
@@ -494,4 +488,4 @@ Claude will: Workflow B. Pull CALC+, run BLS cost pool buildup, position $195, p
 
 ---
 
-*MIT © 2026 James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
+*MIT © James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*

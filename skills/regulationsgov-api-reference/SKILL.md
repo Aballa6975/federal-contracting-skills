@@ -286,4 +286,4 @@ Find all FAR cases: `filter[agencyId]=FAR&filter[docketType]=Rulemaking` on dock
 
 ---
 
-*MIT © 2026 James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
+*MIT © James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*

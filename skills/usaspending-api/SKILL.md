@@ -3,16 +3,7 @@ name: usaspending-api
 description: Query the USASpending.gov REST API for federal contract and award data. Use this skill whenever the user asks about federal spending data, contract descriptions, award details, transaction histories, vendor/recipient lookups, obligation amounts, agency spending breakdowns, PSC/NAICS code lookups, or any procurement research that involves USASpending, FPDS, or FAADC data. Also trigger when the user needs to enrich internal contract data (PRISM, FPDS, ALP, Contract Court) with base award descriptions, transaction histories, or award metadata. Trigger for any mention of USASpending, FPDS, federal awards, PIIDs, FAINs, award IDs, or federal spending analysis. This skill is essential for daily contract portfolio management, description enrichment, and procurement intelligence work.
 ---
 
-# USASpending.gov API Skill (v1.6)
-
-## Changelog
-- v1.6: Refactored for efficiency; moved filter value tables, composite workflows, reference endpoints, PSC codes, and troubleshooting to REFERENCE.md
-- v1.5: Added spending_by_category/recipient field schema, vendor dedup rebrand note, set_aside + category combo
-- v1.4: Documented fiscal_year string type, vendor ALL CAPS note
-- v1.3: Documented spending_by_category response fields, vendor dedup warning
-- v1.2: Added spending_by_award_count, pagination docs, filter value references
-- v1.1: IDV child field mapping, bulk download filter differences, loan field names
-- v1.0: Initial release
+# USASpending.gov API Skill
 
 ## Overview
 
@@ -286,4 +277,4 @@ For filter value tables (contract_pricing_type_codes, extent_competed_type_codes
 
 ---
 
-*MIT © 2026 James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
+*MIT © James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*

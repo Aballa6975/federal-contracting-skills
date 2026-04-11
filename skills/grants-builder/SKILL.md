@@ -20,12 +20,6 @@ description: >
 
 # Grants Builder
 
-**Version 1.0** | March 2026
-
-| Version | Date | Change |
-|---------|------|--------|
-| 1.0 | Mar 2026 | Initial release: SF-424A budget generation with BLS personnel benchmarking, Per Diem travel, NICRA indirect costs, multi-year escalation, and budget justification narrative. |
-
 ## Overview
 
 This skill builds federal grant budget estimates aligned to the Uniform Guidance (2 CFR 200) and the SF-424A budget format. It orchestrates two underlying data skills and Claude's analytical capabilities to produce a complete, defensible grant budget with justification narrative.
@@ -548,4 +542,4 @@ Claude will: verify current NIH salary cap via web search, apply the cap to the 
 
 ---
 
-*MIT © 2026 James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
+*MIT © James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*

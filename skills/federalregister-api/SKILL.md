@@ -4,13 +4,7 @@ description: >
   Query the FederalRegister.gov REST API for Federal Register documents including proposed rules, final rules, notices, executive orders, and public inspection documents. Trigger for any mention of Federal Register, FR documents, proposed rules, final rules, comment periods, FAR cases, rulemaking, regulatory tracking, CFR parts affected, RINs, docket IDs, or public inspection documents. Also trigger when the user needs to monitor regulatory changes affecting acquisition policy, track open comment periods for procurement rules, research the history of a FAR case or docket, or find agency-specific regulatory actions. Complements USASpending (spending data) and CALC+ (labor rates) for a complete procurement intelligence toolkit.
 ---
 
-# FederalRegister.gov API Skill v1.3
-
-## Changelog
-- v1.3: Refactored for efficiency; moved composite workflows, field reference, agency slugs, docket patterns, troubleshooting to REFERENCE.md
-- v1.2: Corrections handling (C1- prefix), presidential document subtypes, docket ID format inconsistency
-- v1.1: Pagination testing, count cap, comment_date filter name fix
-- v1.0: Initial release
+# FederalRegister.gov API Skill
 
 ## Overview
 
@@ -235,4 +229,4 @@ For composite workflows (open comment periods, FAR case history, CFR part tracki
 
 ---
 
-*MIT © 2026 James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
+*MIT © James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*

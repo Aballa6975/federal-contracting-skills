@@ -15,13 +15,7 @@ description: >
   cost elements in professional services IGCEs.
 ---
 
-# GSA Per Diem Rates API Skill v1.3
-
-## Changelog
-- v1.3: Refactored for efficiency; moved recipes, common rates table, error handling, response schemas to REFERENCE.md
-- v1.2: Added annual rate refresh timing gotcha
-- v1.1: 11 bug fixes from API stress testing
-- v1.0: Initial release
+# GSA Per Diem Rates API Skill
 
 ## Overview
 
@@ -37,7 +31,7 @@ Base URL: `https://api.gsa.gov/travel/perdiem/v2/rates/`
 
 ## Rate Structure
 
-**FY2026 Standard Rate (CONUS default):** $110/night lodging, $68/day M&IE
+**Standard CONUS baseline (query the API for exact current values):** approximately $110/night lodging, $68/day M&IE. The baseline changes each October 1 when GSA publishes new fiscal-year rates.
 
 **M&IE Tiers:**
 
@@ -85,7 +79,7 @@ Query "Washington/DC" returns `city = "District of Columbia"`. The `get_best_rat
 NSA rate + standard rate both returned. Prefer the non-standard entry.
 
 ### 7. Fiscal Year, Not Calendar Year
-FY2026 = Oct 2025 - Sep 2026. "Current rates" in March 2026 = `year/2026`.
+The federal fiscal year runs October through September. A date in the first calendar quarter (January-March) is still in the fiscal year that began the prior October. Compute the current FY at query time; do not hardcode.
 
 ### 8. Seasonal Lodging Variations
 Many NSAs vary by month (DC: $183-$276). M&IE does NOT vary seasonally. Retrieve all 12 months for multi-month estimates.
@@ -216,4 +210,4 @@ For recipes (single lookup with M&IE breakdown, travel cost estimation, multi-lo
 
 ---
 
-*MIT © 2026 James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
+*MIT © James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*

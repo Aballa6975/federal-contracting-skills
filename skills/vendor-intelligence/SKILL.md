@@ -13,20 +13,14 @@ description: >
 
 # Vendor Intelligence Skill
 
-**Version 1.0** | April 2026
-
-| Version | Date | Change |
-|---------|------|--------|
-| 1.0 | Apr 2026 | Initial release: full pre-award due diligence with 11 risk flags, FAR 9.104-1 mapping, award history |
-
 ## Overview
 
 This skill orchestrates three API skills to produce pre-award vendor intelligence reports. It contains no API code of its own. It tells Claude what to pull from SAM.gov, USASpending, and eCFR, in what order, and how to synthesize findings into a structured due diligence report with responsibility factor evidence and risk flags.
 
 **Required skills (must be installed):**
-1. **SAM.gov API (v1.1+)**: entity registration, exclusions, contract awards
-2. **USASpending API (v1.5+)**: federal award spending data
-3. **eCFR API (v1.2+)**: FAR/DFARS clause text
+1. **SAM.gov API**: entity registration, exclusions, contract awards
+2. **USASpending API**: federal award spending data
+3. **eCFR API**: FAR/DFARS clause text
 
 **Required API keys:** SAM.gov API key (same key used by SAM.gov skill). USASpending and eCFR require no keys.
 
@@ -292,4 +286,4 @@ This workflow makes 5-10 SAM.gov API calls per vendor (entity, exclusions, award
 
 ---
 
-*MIT © 2026 James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
+*MIT © James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*

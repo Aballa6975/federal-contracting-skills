@@ -4,13 +4,7 @@ description: >
   Query the GSA CALC+ Labor Ceiling Rates API for awarded GSA MAS schedule hourly rates. Use this skill whenever the user asks about GSA labor rates, MAS ceiling prices, IGCE development, price reasonableness analysis, labor category comparisons, GSA schedule pricing, or market research for professional services acquisitions. Trigger for any mention of CALC, CALC+, ceiling rates, GSA rates, MAS rates, labor categories, GSA pricing, schedule pricing, IGCE support, price analysis, or rate benchmarking. Also trigger when the user needs to compare vendor pricing, look up rates by education/experience level, find rates for a specific SIN, or support price negotiations for task orders under GSA MAS contracts. This skill is essential for IGCEs, price reasonableness determinations, market research memos, and competitive range analysis.
 ---
 
-# GSA CALC+ Labor Ceiling Rates API Skill v1.3
-
-## Changelog
-- v1.3: Refactored for efficiency; moved aggregation schemas, composite workflows, SIN table, pagination, troubleshooting to REFERENCE.md
-- v1.2: Standardized median extraction on histogram_percentiles across all recipes
-- v1.1: Messy field docs, education_level_counts, suggest-contains workflow, SIN analysis
-- v1.0: Initial release
+# GSA CALC+ Labor Ceiling Rates API Skill
 
 ## Overview
 
@@ -221,4 +215,4 @@ For complete aggregation schemas, composite workflows (IGCE benchmarking, price 
 
 ---
 
-*MIT © 2026 James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
+*MIT © James Jenrette / 1102tools. Source: github.com/1102tools/federal-contracting-skills*
