@@ -471,8 +471,10 @@ Generate a formal DOCX with these sections:
 - **Column character limits for landscape (12,960 DXA content width):** PIID: 20 chars (~2,000 DXA), Vendor: 35 chars (~3,200 DXA), Amount: ~1,800 DXA, Start Date: ~1,500 DXA, End Date: ~1,500 DXA, Awarding Agency: 35 chars (~2,960 DXA). Truncate vendor names and agency names that exceed limits. Do not truncate PIIDs.
 - **Footer re-definition across section breaks:** docx-js section breaks reset headers and footers. Re-define the footer paragraph (with page numbers) in every section: the portrait opening section, the landscape Section 4 section, and the portrait Section 5+ section. Without this, page numbers disappear after the first section break.
 - Exclude $0 awards from the table
+- If awards in the table have start dates before the lookback period, add a note: "Awards with start dates before FY[start] appear because they had contract modification activity (obligations, deobligations, or administrative changes) during the lookback period. Base award dates reflect the original contract, not the modification date."
 - Award value distribution summary (max, median, mean only; omit min) based on positive-value awards, with explicit label: "Top Awards Sample" and a note that these are not population statistics
 - If agency-scoped results are thin (<20 awards), note this and include the total government-wide count for context
+- If agency-scoped results return zero, label the section "(Government-Wide)" AND explain the fallback: "NAVWAR returned zero awards under NAICS 541512 / PSC D399. Government-wide data is presented for market context." Do not silently label it government-wide without explaining why.
 
 **5. Vendor Landscape ([Agency] or Government-Wide)**
 - Table of top N vendors: rank, vendor name, total obligations, market share %
