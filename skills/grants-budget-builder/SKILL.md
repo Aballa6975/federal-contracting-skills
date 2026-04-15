@@ -1,5 +1,5 @@
 ---
-name: grants-builder
+name: grants-budget-builder
 description: >
   Build federal grant budget estimates aligned to 2 CFR 200 (Uniform
   Guidance) and SF-424A format by orchestrating BLS OEWS and GSA Per
@@ -14,11 +14,14 @@ description: >
   travel estimate, budget narrative, budget justification narrative,
   subaward budget, or modular budget. Also trigger for grant-related
   pricing, effort-based costing, or institutional rate lookups. Does
-  NOT cover contract IGCEs (use IGCE Builder Core for FAR-based
-  estimates). Requires BLS OEWS API and GSA Per Diem Rates API skills.
+  NOT cover contract IGCEs (use IGCE Builder FFP, LH/T&M, or CR for
+  FAR-based estimates). Does NOT cover NOFO program descriptions (use
+  grants-program-description-builder for the government-written "what"
+  document that precedes this budget skill). Requires BLS OEWS API
+  and GSA Per Diem Rates API skills.
 ---
 
-# Grants Builder
+# Grants Budget Builder
 
 ## Overview
 
