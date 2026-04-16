@@ -4,7 +4,7 @@ Claude Skills for federal contracting professionals. No subscriptions, no paywal
 
 Website: [1102tools.com](https://1102tools.com)
 
-![Architecture diagram showing three parallel chains. Left: FAR-based contracts where SOW/PWS Builder feeds three IGCE Builders (FFP, LH/T&M, Cost-Reimbursement). Middle: Other Transactions where OT Project Description Builder feeds OT Cost Analysis (milestone-based pricing under 10 USC 4021/4022). Right: Grants and Cooperative Agreements where Grants Program Description Builder feeds Grants Budget Builder (2 CFR 200, SF-424A). All three chains pull from shared API data sources: BLS OEWS, GSA CALC+, and GSA Per Diem. Also in the collection: Market Research Builder, Vendor Intelligence, and Award Review.](docs/architecture.png?v=2026-04-15)
+![Architecture diagram showing four columns. Market Research Builder pulls from USASpending. FAR-based contracts where SOW/PWS Builder feeds three IGCE Builders (FFP, LH/T&M, Cost-Reimbursement) pulling from BLS OEWS, GSA CALC+, and GSA Per Diem. Other Transactions where OT Project Description Builder feeds OT Cost Analysis pulling from the same three data sources. Grants and Cooperative Agreements where Grants Program Description Builder feeds Grants Budget Builder pulling from BLS OEWS and GSA Per Diem.](docs/architecture.png?v=2026-04-16)
 
 > **Before you build:** Not every acquisition capability should be an AI tool. Dozens of potential skills were evaluated and several were intentionally excluded. Some are planned and coming. Others will never be built because they cross the line from data assembly into professional judgment -- the kind of output that would not survive a protest, would not be adopted by the workforce, and would not be worth the time to develop. Read **[AI-BOUNDARIES.md](AI-BOUNDARIES.md)** for the full reasoning. It will save you development time and your users the backlash.
 
@@ -40,10 +40,6 @@ Website: [1102tools.com](https://1102tools.com)
 | [IGCE Builder: LH/T&M](skills/igce-builder-lh-tm) | No key* | BLS OEWS, GSA CALC+, GSA Per Diem | Labor Hour and T&M IGCEs with burden multiplier pricing. |
 | [IGCE Builder: Cost-Reimbursement](skills/igce-builder-cr) | No key* | BLS OEWS, GSA CALC+, GSA Per Diem | CPFF, CPAF, CPIF IGCEs with fee structure analysis and statutory fee caps. |
 | [Market Research Builder](skills/market-research-builder) | No key* | USASpending API | FAR Part 10 market research report from USASpending data. |
-| [Vendor Intelligence](skills/vendor-intelligence) | No key* | SAM.gov API, USASpending API | Pre-award vendor due diligence: entity profiles, exclusion checks, award history, FAR 9.104-1 mapping, 11 risk flags. |
-| [Vendor Intelligence Reference](skills/vendor-intelligence-reference) | No key | -- | FAR 9 responsibility guide, risk flag definitions, business type codes. Install alongside main skill. |
-| [Award Review](skills/award-review) | No key* | SAM.gov API, USASpending API | Post-award contract review: 12 factual observations covering entity registration, competition, subawards, and contract structure. |
-| [Award Review Reference](skills/award-review-reference) | No key | -- | Observation definitions, thresholds, code tables, FFRDC/M&O exclusion list. Install alongside main skill. |
 
 ### Other Transaction (OT) Skills
 
