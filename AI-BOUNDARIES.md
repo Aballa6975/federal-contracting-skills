@@ -4,7 +4,7 @@ AI accelerates federal contracting when it assembles data and formats human reas
 
 ## The Line
 
-Tools assemble. Humans reason. An AI that pulls BLS wages, matrixes proposal data, or drafts a memo from a contracting officer's formed judgment is doing work the system already tolerates from support contractors and clerks. An AI that reads a proposal and decides what the strengths are, ranks offerors, recommends an awardee, or concludes a responsibility determination is producing the reasoning the FAR places with a named human actor.
+Tools assemble. Humans reason. An AI that pulls BLS wages, matrixes proposal data, or drafts a memo from a contracting officer's formed judgment is doing work the system already tolerates from support contractors and specialists. An AI that reads a proposal and decides what the strengths are, ranks offerors, recommends an awardee, or concludes a responsibility determination is producing the reasoning the FAR places with a named human actor.
 
 The test is simple. If the signer cannot defend every evaluative claim in the final record without pointing back at the tool's output, the tool crossed the line.
 
