@@ -52,8 +52,7 @@ Website: [1102tools.com](https://1102tools.com)
 
 | Skill | Key | Requires | Description |
 |-------|-----|----------|-------------|
-| [Grants Program Description Builder](skills/grants-program-description-builder) | No key | -- | Program Description section of a Notice of Funding Opportunity (NOFO) for federal grants and cooperative agreements under 2 CFR 200. The grants analog to the SOW/PWS for FAR contracts and the OT Project Description for OT agreements. Walks program officers through a 4-question Program Authority Intake (instrument type, program category, statutory authority, duration) and a 6-block scope decision tree. Produces a .docx that drops into the agency's NOFO template plus a chat-only program parameters handoff table for the Grants Budget Builder. |
-| [Grants Budget Builder](skills/grants-budget-builder) | No key* | BLS OEWS, GSA Per Diem | Federal grant budget estimates aligned to 2 CFR 200 / SF-424A. Calculates personnel costs with percent-effort, fringe by appointment type, travel via Per Diem, and indirect costs via NICRA or de minimis rate. The cost-side sister skill to the Grants Program Description Builder. |
+| [Grants Budget Builder](skills/grants-budget-builder) | No key* | BLS OEWS, GSA Per Diem | Federal grant budget estimates aligned to 2 CFR 200 / SF-424A. Calculates personnel costs with percent-effort, fringe by appointment type, travel via Per Diem, and indirect costs via NICRA or de minimis rate. |
 
 *Uses keys from other installed skills. No additional key needed.
 
