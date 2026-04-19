@@ -37,7 +37,7 @@ See **[AI-BOUNDARIES.md](AI-BOUNDARIES.md)**.
 
 | Skill | Key | Requires | Description |
 |-------|-----|----------|-------------|
-| [SOW/PWS Builder](skills/sow-pws-builder) | No key | -- | Structured scope decision tree producing contract-file-ready SOW or PWS. FAR 37.102(d) compliant: staffing handoff for the IGCE Builder is delivered as chat output, never embedded in the document body. Independently tested across 8 scenarios and 2 Claude models (83 of 84 assertions passed). Testing Record: [markdown](skills/sow-pws-builder/TESTING.md) or [PDF](skills/sow-pws-builder/TESTING.pdf). |
+| [SOW/PWS Builder](skills/sow-pws-builder) | No key | -- | Structured scope decision tree producing contract-file-ready SOW or PWS. FAR 37.102(d) compliant: staffing handoff for the IGCE Builder is delivered as chat output, never embedded in the document body. Independently tested across 8 scenarios and 2 Claude models (83 of 84 assertions passed). [Testing Record](skills/sow-pws-builder/TESTING.md). |
 | [IGCE Builder: FFP](skills/igce-builder-ffp) | No key* | BLS OEWS, GSA CALC+, GSA Per Diem | Firm-fixed-price IGCEs with layered wrap rate model (fringe, overhead, G&A, profit). |
 | [IGCE Builder: LH/T&M](skills/igce-builder-lh-tm) | No key* | BLS OEWS, GSA CALC+, GSA Per Diem | Labor Hour and T&M IGCEs with burden multiplier pricing. |
 | [IGCE Builder: Cost-Reimbursement](skills/igce-builder-cr) | No key* | BLS OEWS, GSA CALC+, GSA Per Diem | CPFF, CPAF, CPIF IGCEs with fee structure analysis and statutory fee caps. |
@@ -65,7 +65,7 @@ Skills in this repo are progressively being run through independent end-to-end v
 
 | Skill | Scenarios | Models tested | Assertion result | Testing Record |
 |-------|-----------|---------------|------------------|----------------|
-| [SOW/PWS Builder](skills/sow-pws-builder) | 8 | Opus 4.7 + Sonnet 4.6 | 83 of 84 passed, 1 fixed | [markdown](skills/sow-pws-builder/TESTING.md) / [PDF](skills/sow-pws-builder/TESTING.pdf) |
+| [SOW/PWS Builder](skills/sow-pws-builder) | 8 | Opus 4.7 + Sonnet 4.6 | 83 of 84 passed, 1 fixed | [Testing Record](skills/sow-pws-builder/TESTING.md) |
 | [IGCE Builder: FFP](skills/igce-builder-ffp) | Pending | -- | -- | Not yet published |
 | [IGCE Builder: LH/T&M](skills/igce-builder-lh-tm) | Pending | -- | -- | Not yet published |
 | [IGCE Builder: Cost-Reimbursement](skills/igce-builder-cr) | Pending | -- | -- | Not yet published |
