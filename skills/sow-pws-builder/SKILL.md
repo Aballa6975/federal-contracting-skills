@@ -82,7 +82,7 @@ If the user says "unsure," recommend FFP for well-defined services, T&M for requ
 
 - **Commercial service** = routinely sold to the general public in the course of normal business operations, per FAR 2.101 commercial product/service definition. Help desk services, facility maintenance, COTS software support, training, staff augmentation for standard skills are typically commercial.
 - **Non-commercial** = government-unique work such as classified, research, weapon systems development, or work performed using specialized government processes not available in the commercial marketplace.
-- When **commercial**, FAR Part 12 governs. The SOW/PWS Section 5 CLIN structure should reference FAR 52.212-4 terms; full Section I/L buildout is not required. Contract type is typically FFP per FAR 12.207. Performance-based description is preferred per FAR 12.102(g).
+- When **commercial**, FAR Part 12 governs. FAR 52.212-4 terms apply in Section I of the solicitation; full Section I/L buildout is not required. Contract type is typically FFP per FAR 12.207. Performance-based description is preferred per FAR 12.102(g). CLIN structure (emitted in the Phase 3 chat-only handoff, not the PWS body) should accommodate commercial item pricing.
 - When **non-commercial**, FAR Part 15 governs. Full Section I/L clause buildout applies. All contract types available.
 - If the user is unsure, note "Commercial item determination pending — flag for Contracting Officer" in Section 14 Constraints and Assumptions and proceed with Phase 1.
 
@@ -147,7 +147,7 @@ Contract type is already captured in the Acquisition Strategy Intake above; do n
 
 17. **Period of performance:** Base year + option years (how many?)
 18. **Base year scope:** Full performance from day 1 | Ramp-up/transition-in period (how long?) | Design/development only, production in options
-19. **CLIN structure preference:** By period (CLINs = base year, OY1, OY2...) | By function (CLINs = development, operations, maintenance, training) | By deliverable | Unsure (skill will recommend)
+19. **CLIN structure preference (for Section B handoff, NOT the PWS body):** By period (CLINs = base year, OY1, OY2...) | By function (CLINs = development, operations, maintenance, training) | By deliverable | Unsure (skill will recommend). This preference is emitted as a chat-only CLIN Handoff Table in Phase 3 for the CO to paste into Section B of the solicitation. It does NOT go into the SOW/PWS document body.
 20. **Transition requirements:** Transition-in from incumbent? | Transition-out plan required? | Both
 
 ### Block 6: Quality and Oversight
@@ -231,11 +231,13 @@ Generate the SOW or PWS using the docx skill. Read `/mnt/skills/public/docx/SKIL
 - Deliverables table: ID | Title | Description | Format | Frequency | Due Date/Trigger | Acceptance Criteria
 - Standard deliverables to always include: Monthly Status Report, Transition-In Plan (if applicable), Transition-Out Plan, System Documentation, Training Materials
 
-**Section 5: CLIN Structure**
-- Map deliverables and tasks/objectives to CLINs
-- Note which CLINs are priced (FFP) vs. estimated (T&M/LH) vs. cost-reimbursable
-- Include CLIN descriptions suitable for the schedule
-- **T&M/LH exception (FAR 16.601(c)(2)):** If the contract type selected in the Acquisition Strategy Intake is T&M or LH, include a **Labor Category Ceiling Hours** table in Section 5. This table tells offerors which labor categories the government expects them to propose rates against and the ceiling hours per LCAT per period. It is a pricing risk-sharing mechanism, NOT an FTE estimate or a staffing prescription. Table columns: `Labor Category | Base Year Ceiling Hours | OY1 | OY2 | OY3 | OY4 | Total Ceiling`. Do NOT include SOC codes, FTE counts, "derivation basis," or anything resembling the Phase 3 staffing handoff table — those remain in chat output only. For FFP and CR contracts, omit this table entirely; no labor information goes in Section 5 or anywhere else in the document body.
+**Section 5: Labor Category Ceiling Hours (T&M/LH only)**
+
+**CLINs do NOT go in the SOW/PWS body.** CLIN structure is a pricing/contract-admin construct that belongs in Section B of the UCF solicitation. Including a CLIN table in the SOW/PWS either creates a conflict when the CO drops a real Section B on top, or reveals the document isn't actually a SOW/PWS but a mashed-up mini-contract. The CLIN preferences gathered in Block 5 of the intake are emitted as a **chat-only CLIN Handoff Table** in Phase 3 for the CO to paste into Section B. They never appear in the document body.
+
+**T&M/LH only (FAR 16.601(c)(2)):** If the contract type selected in the Acquisition Strategy Intake is T&M or LH, Section 5 is titled "Labor Category Ceiling Hours" and contains a single table telling offerors which labor categories the government expects them to propose rates against and the ceiling hours per LCAT per period. It is a pricing risk-sharing mechanism, NOT an FTE estimate or staffing prescription. Table columns: `Labor Category | Base Year Ceiling Hours | OY1 | OY2 | OY3 | OY4 | Total Ceiling`. Do NOT include SOC codes, FTE counts, "derivation basis," or anything resembling the Phase 3 staffing handoff table.
+
+**For FFP and CR contracts:** omit Section 5 entirely and renumber subsequent sections. Do not substitute a CLIN table, pricing schedule, or any other pricing content.
 
 **Section 6: Period of Performance**
 
@@ -257,9 +259,20 @@ Generate the SOW or PWS using the docx skill. Read `/mnt/skills/public/docx/SKIL
 - Points of contact
 
 **Section 12: Quality Assurance Surveillance Plan (QASP) Summary**
-- Performance metrics table: Metric | Standard | AQL | Method | Frequency | Incentive
+- Performance metrics table: Metric | Standard | AQL | Method | Frequency | Payment Consequence
 - Full QASP may be a separate document; include summary here
 - For SOW documents, title this section "Inspection and Acceptance" and cite FAR 52.246-series clauses as the inspection basis. For PWS documents, keep "QASP Summary" and cite FAR 37.602 / 46.401. Table structure is identical; label and legal basis differ.
+
+**CRITICAL: Do NOT tie QASP thresholds to CPARS ratings.** CPARS (FAR 42.15) is a separate post-performance evaluation with fixed FAR rating categories (Exceptional / Very Good / Satisfactory / Marginal / Unsatisfactory) based on the CO's judgment across the full factor set. It is NOT bound by QASP threshold mechanics and cannot be pre-committed in a SOW/PWS. Writing "95% threshold = CPARS Satisfactory" is both legally wrong and defeats the point of performance-based acquisition.
+
+**The Payment Consequence column must describe what happens to payment or contract administration when the threshold is missed.** Acceptable examples:
+- "Below threshold: 5% deduction on the monthly invoice for the affected objective."
+- "Below AQL for two consecutive months: cure notice issued per FAR 52.212-4(m)."
+- "Three consecutive months below threshold: consideration for termination for cause / default."
+- "Exceeding threshold by X%: positive incentive fee of $Y per [period] (CPIF/award-fee only)."
+- "Acceptance withheld until correction; re-performance at no additional cost."
+
+Do NOT put CPARS ratings, CPARS thresholds, or the words "Satisfactory / Exceptional / Very Good / Marginal / Unsatisfactory" in the Payment Consequence column. Those belong in the post-performance CPARS evaluation, not the QASP.
 
 **Section 13: Transition**
 - 13.1 Transition-In (if applicable): knowledge transfer, incumbent cooperation, parallel operations
@@ -302,19 +315,20 @@ Generate the SOW or PWS using the docx skill. Read `/mnt/skills/public/docx/SKIL
 
 ## Phase 3: Validation and Handoff
 
-**UNCONDITIONAL RULE:** At the end of every run, present the Staffing Handoff Table as a markdown block in chat. This is REQUIRED, not optional, regardless of contract type, commercial status, or whether the user mentions the IGCE Builder. The table is informational for commercial FFP (where the contractor owns labor mix risk), and load-bearing for T&M/LH/CR. In both cases, emit it. Do not skip or self-edit based on judgment that the user "won't need it."
+**UNCONDITIONAL RULE:** At the end of every run, present BOTH chat-only handoff tables as markdown blocks in chat: (1) the Staffing Handoff Table for the IGCE Builder, and (2) the CLIN Handoff Table for Section B of the solicitation. Both are REQUIRED, not optional, regardless of contract type, commercial status, or whether the user mentions downstream skills. The staffing table is informational for commercial FFP (where the contractor owns labor mix risk) and load-bearing for T&M/LH/CR. The CLIN handoff is always emitted because Section B is always separate from Section C (the PWS). Do not skip or self-edit based on judgment that the user "won't need it."
 
 ### Document Review Checklist
 
 Before presenting the final document, verify:
 
 - [ ] Every task/objective maps to at least one deliverable
-- [ ] Every deliverable maps to at least one CLIN
-- [ ] Every CLIN has a pricing basis (FFP, T&M, etc.)
+- [ ] Every deliverable has acceptance criteria
 - [ ] Key personnel roles match the staffing table
 - [ ] Security requirements are consistent throughout
-- [ ] Period of performance matches CLIN structure
+- [ ] Period of performance matches the phasing decisions from Phase 1
 - [ ] QASP metrics are measurable and have defined AQLs
+- [ ] QASP Payment Consequence column contains payment/admin consequences, NOT CPARS ratings
+- [ ] No CLIN table, pricing schedule, or Section B content in the document body
 - [ ] Transition-in/out timelines are realistic
 - [ ] No orphaned requirements (stated but never deliverable-mapped)
 - [ ] No scope gaps (Phase 1 decisions not reflected in requirements)
@@ -353,6 +367,38 @@ After the table, tell the user in plain chat prose: *"This staffing table is rea
 **Why this rule exists:** Prior versions of this skill allowed the staffing table to be embedded as Appendix A of the SOW/PWS with a "not prescriptive" disclaimer. This violated FAR 37.102(d) because offerors anchor on FTE counts when they appear in a requirement document, regardless of disclaimers. It also leaked skill-internal messaging ("say 'build the IGCE'") into contract file deliverables. The staffing data is still needed — it just belongs in chat output between the two skills, not in the document submitted to the contracting officer.
 
 **The one exception** is the T&M/LH Labor Category Ceiling Hours table in Section 5 per FAR 16.601(c)(2). That is a pricing mechanism (ceiling hours, no SOC codes, no FTE counts, no derivation basis) and is not the same thing as this staffing handoff table.
+
+### CLIN Handoff Table (CHAT OUTPUT ONLY — NEVER IN THE DOCUMENT)
+
+**After the staffing handoff table, present the CLIN Handoff Table.** Same pattern, same rules: chat-only markdown, never written to the SOW/PWS body, never saved as a file. CLINs live in Section B of the solicitation, not the PWS. This table exists so the CO can paste it into their Section B draft.
+
+Present it verbatim:
+
+```
+=== CLIN HANDOFF TABLE — FOR SECTION B OF THE SOLICITATION ===
+Contract-admin workpaper. NOT part of the SOW/PWS contract deliverable.
+Paste into Section B of the solicitation shell, not the PWS body.
+
+| CLIN | Description                        | Pricing Basis              | Period / Scope Notes |
+|------|------------------------------------|----------------------------|----------------------|
+| 0001 | Base Year Performance              | FFP                        | Covers Sections 3.x objectives |
+| 0002 | Base Year Travel                   | Cost-reimbursable (NTE)    | FAR 31.205-46; no fee |
+| 0003 | Base Year ODCs                     | Cost-reimbursable (NTE)    | Receipts required |
+| 1001 | Option Year 1 Performance          | FFP                        | Same scope as CLIN 0001 |
+| ...  | ...                                | ...                        | ... |
+```
+
+Build the rows from the CLIN structure preference captured in Block 5 question 19. If the user chose "by period," CLINs are base/OY1/OY2/...; if "by function," CLINs are development/operations/maintenance/training; if "by deliverable," each major deliverable gets its own CLIN. Always add separate travel and ODC CLINs if travel/ODCs are in scope.
+
+After the table, tell the user: *"This CLIN structure is a suggested starting point for Section B of the solicitation. It is not part of the SOW/PWS and should not be pasted into the document body. The contracting officer owns the final CLIN structure."*
+
+**DO NOT, under any circumstances:**
+- Write the CLIN table into the SOW/PWS document body, any section, or any appendix.
+- Save the CLIN table as a separate .docx, .xlsx, .csv, .md, or any other file format.
+- Label any part of the SOW/PWS as "CLIN Structure," "CLIN Table," "Contract Line Items," "Pricing Schedule," or any similar phrasing.
+- Emit the table as anything other than a markdown code block or markdown table in the chat conversation.
+
+**Why this rule exists:** The PWS is Section C of the UCF (description of work). CLINs live in Section B (supplies/services and prices/costs). Including CLINs in the PWS body creates a conflict when the CO drops a real Section B on top, or reveals the document isn't actually a PWS but a mashed-up mini-contract. Experienced 1102s flag this immediately. The CLIN preference data is still useful for building Section B. It just belongs in chat handoff, not the contract file deliverable.
 
 ## Edge Cases
 
