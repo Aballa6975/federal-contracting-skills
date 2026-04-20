@@ -19,23 +19,15 @@ Two waves of independent testing in April 2026 (14 end-to-end runs, 168 binary a
 
 ## Manual-verification checklist
 
-Before you release any PWS or SOW the skill produced, scan for four things.
+The Wave 2 testing surfaced four specific gaps in the skill's output. **All four were patched after Wave 2.** The patches have not yet been regression-tested (Wave 3 will do that), so until the next wave confirms the fixes hold, scan every output for these items.
 
-**1. Key Personnel substitution clause.** The skill almost always emits "FAR 52.237-2" as the Key Personnel substitution clause. FAR 52.237-2 is actually "Protection of Government Buildings, Equipment, and Vegetation." The correct clause depends on your agency and contract form:
+**1. Key Personnel substitution clause.** Historical gap: the skill emitted "FAR 52.237-2" as the Key Personnel clause on 5 of 6 Wave 2 runs. FAR 52.237-2 is actually "Protection of Government Buildings, Equipment, and Vegetation" — the wrong clause. The Wave 2 patch removed that default and added agency-aware guidance: NFS 1852.237-72 for NASA, HSAR 3052.237-72 for DHS, HHSAR 352.237-75 for HHS, DFARS where applicable for DoD, and a generic fallback that avoids FAR 52.237-2 entirely. Verify the citation still looks right for your agency.
 
-- Generic default for most agencies: FAR 52.237-3 Continuity of Services
-- NASA: NFS 1852.237-72
-- DoD: DFARS or agency-specific Key Personnel clause
-- DHS: HSAR equivalent
-- HHS: HHSAR equivalent
+**2. CPFF form selection.** Historical gap: on both Wave 2 CPFF runs, the skill cited FAR 16.306 without selecting completion form or term form. The Wave 2 patch added a Phase 2 rule requiring the skill to explicitly name completion form (FAR 16.306(d)(1)) or term form (FAR 16.306(d)(2)) wherever the contract framework first appears. Verify your CPFF PWS says which form it is. The difference matters: completion form requires delivery of a specified end product before the full fixed fee is earned; term form obligates a stated level of effort over a stated period. Term form is usually the right default for R&D where technical outcomes are uncertain.
 
-Sonnet sometimes catches this correctly when the agency FAR supplement is well-known (it did on NASA). Opus consistently emits FAR 52.237-2 regardless of agency. Replace it before solicitation release.
+**3. Classified security block.** Historical gap: on both Wave 2 Labor-Hour TS/SCI runs, DD Form 254 and Security Classification Guide references were missing. The Wave 2 patch added required DD 254 and SCG references in Section 9 whenever any clearance at Confidential or higher is called out. Verify the security block for any classified requirement.
 
-**2. CPFF form selection.** If you are producing a CPFF PWS, check that the document explicitly names completion form (FAR 16.306(d)(1)) or term form (FAR 16.306(d)(2)). The skill does not currently commit to one. The difference matters. Completion form requires delivery of a specified end product before the full fixed fee is earned. Term form obligates a stated level of effort over a stated period. For R&D where technical outcomes are uncertain, term form is usually the right choice.
-
-**3. Classified security block.** If your requirement involves classified work at Secret, Top Secret, or TS/SCI, add two references the skill currently omits: DD Form 254 (the contract security classification specification) and a Security Classification Guide (SCG). The skill does cover clearance levels, SCIF requirements, and derivative classification, but DD 254 and SCG are missing from the classified security block.
-
-**4. Section ordering.** The skill occasionally swaps Section 11 and Section 12 (QASP versus Transition) across runs. Terminology is always correct; only the position drifts. Low severity. A visual scan is enough.
+**4. Section ordering.** Historical gap: workers occasionally swapped Section 11 (Reporting) and Section 12 (QASP) across runs. The Wave 2 patch added prescriptive language fixing Sections 11 through 14 in their correct order and explicitly disallowing merging or reordering. Low severity. A visual scan is enough.
 
 ## Choosing between Opus 4.7 and Sonnet 4.6
 
@@ -221,15 +213,19 @@ Candidate patch: when clearance above Confidential is called out, the Phase 2 se
 
 Skill version lines: 361 before Wave 1 patches, 380 after. Ceiling: 1,000.
 
-### Candidate patches from Wave 2 (not yet shipped)
+### Shipped after Wave 2 (5 patches)
 
 | Patch | Section affected | Trigger |
 |---|---|---|
-| Agency-aware Key Personnel substitution clause selection | Phase 2 Key Personnel block | FAR 52.237-2 emitted on 5 of 6 Wave 2 runs |
-| Explicit CPFF form commitment (completion or term per FAR 16.306(d)) | Phase 2 CPFF block | S5 failure on both Wave 2 CPFF runs |
-| DD Form 254 and SCG reference in classified security block | Phase 2 security block when clearance above Confidential | S6 failure on both Wave 2 LH runs |
-| Explicit user-proceed gate on Phase 1 Decision Summary | Phase 1 closing | Sonnet self-approved on Scenario 6 |
-| Fixed section ordering (QASP at Section 12, Transition at Section 11) | Phase 2 template | QASP and Transition position drift across runs |
+| Agency-aware Key Personnel substitution clause selection (removed the wrong FAR 52.237-2 default; added agency-specific guidance for NASA, DHS, HHS, DoD, and a generic fallback) | Phase 2 Key Personnel block | FAR 52.237-2 emitted on 5 of 6 Wave 2 runs |
+| Explicit CPFF form commitment required (skill must name completion form per FAR 16.306(d)(1) or term form per FAR 16.306(d)(2) wherever contract framework first appears) | Phase 2 Section 5 block | S5 failure on both Wave 2 CPFF runs |
+| DD Form 254 and SCG reference added to Section 9 for any classified requirement at Confidential or higher | Phase 2 Section 9 block | S6 failure on both Wave 2 LH runs |
+| Strengthened Phase 1 proceed gate; explicit "DO NOT self-approve" rule with requirement that the response must END after presenting the Decision Summary | Phase 2 Invocation Gate | Sonnet self-approved on Scenario 6 |
+| Fixed section ordering made explicit and prescriptive (Section 11 Reporting, Section 12 QASP, Section 13 Transition, Section 14 Constraints — do not merge, combine, swap, or rename) | Phase 2 Section Structure header | QASP and Transition position drift across runs |
+
+Skill version lines: 426 before Wave 2 patches, 450 after. Ceiling remains 1,000.
+
+These patches are shipped in the current skill but have not yet been validated against a fresh test wave. Wave 3 will regression-test the same six scenarios against the patched skill to confirm the Wave 2 failure modes no longer reproduce.
 
 ## What was not tested
 

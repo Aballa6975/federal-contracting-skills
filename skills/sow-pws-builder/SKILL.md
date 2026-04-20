@@ -198,9 +198,13 @@ Before invoking the docx skill for document generation, present a Phase 1 Decisi
 
 Wait for the user to reply "proceed" (or correct any item) before generating the .docx. Do this even when the user has waived interactive Phase 1 — it provides a catch point before a large document generation locks in framing errors and preserves progress if the session is interrupted.
 
+**DO NOT self-approve.** Presenting the Decision Summary and then immediately continuing to docx generation in the same response (e.g., emitting "Proceeding to document assembly now" or similar without waiting for user input) defeats the entire purpose of the gate. The user must have an opportunity to read the summary, catch a wrong default, and redirect before the .docx is built. After presenting the Decision Summary, the response must END. Wait for the next user message containing "proceed" (or a correction) before invoking the docx skill. This applies even when the user's original prompt was richly specified. The intake defaults applied in Phase 1 are your inferences; the user is entitled to review them before commitment.
+
 Generate the SOW or PWS using the docx skill. Read `/mnt/skills/public/docx/SKILL.md` before generating output. Include a Table of Contents after the title block when the document will contain more than 8 sections.
 
 ### SOW/PWS Section Structure
+
+**Section ordering is prescriptive.** The sections below appear in the document in the exact order shown. Do not merge, combine, swap, or rename them. In particular: Section 11 is Reporting and Oversight, Section 12 is QASP Summary, Section 13 is Transition, Section 14 is Constraints and Assumptions. If a contract-type-specific section is omitted (Section 5 is T&M/LH only), renumber subsequent sections sequentially but preserve the relative order of all remaining sections. Workers have been observed placing QASP at Section 11 and Transition at Section 12, or collapsing Reporting and Oversight into another section. Do not do this.
 
 **Section 1: Introduction**
 - 1.1 Purpose
@@ -239,6 +243,12 @@ Generate the SOW or PWS using the docx skill. Read `/mnt/skills/public/docx/SKIL
 
 **For FFP and CR contracts:** omit Section 5 entirely and renumber subsequent sections. Do not substitute a CLIN table, pricing schedule, or any other pricing content.
 
+**CPFF contracts — explicit form commitment required (FAR 16.306(d)):** For any Cost-Plus-Fixed-Fee contract, the document must explicitly identify whether the contract is completion form (FAR 16.306(d)(1)) or term form (FAR 16.306(d)(2)) at the first place the contract framework is described (typically the opening framing table or Section 1.1 Purpose). This is non-negotiable. The two forms have materially different fee-earning mechanics:
+- **Completion form (16.306(d)(1)):** describes the scope in terms of a definite goal or end product. The contractor must complete and deliver the specified end product before the full fixed fee is earned. Use for CPFF where the deliverable is bounded and defined (e.g., a report, a prototype, a validated analytical model).
+- **Term form (16.306(d)(2)):** describes the scope in general terms and obligates the contractor to devote a specified level of effort over a stated time period. Fee is earned across the level-of-effort period. Use for CPFF R&D where technical success is uncertain and the contractor cannot be expected to guarantee a specific end product.
+- When selecting: for R&D with defined end deliverables (characterization data, technology maturation reports, subscale hardware), either form can work but term form is usually more appropriate because R&D success is not guaranteed. For production-oriented CPFF with a defined end product, completion form is appropriate. When unsure, default to term form and flag the selection in Section 14 for CO confirmation.
+- Never cite only "FAR 16.306" without the (d)(1) or (d)(2) subparagraph.
+
 **Section 6: Period of Performance**
 
 **Section 7: Place of Performance**
@@ -246,11 +256,25 @@ Generate the SOW or PWS using the docx skill. Read `/mnt/skills/public/docx/SKIL
 **Section 8: Government-Furnished Property/Information**
 
 **Section 9: Security Requirements**
+- Unclassified contracts: address information safeguarding (FAR 52.204-21 Basic Safeguarding and, when CUI is in scope, NIST SP 800-171), personnel suitability (Public Trust at the appropriate tier), and any agency-specific baseline (e.g., GSA IT security policy, DHS MD 11042.1, NASA IT security standards).
+- **Classified contracts — REQUIRED references when any clearance at Confidential or higher is called out:**
+  - **DD Form 254 (Contract Security Classification Specification).** State that a DD Form 254 will be issued at contract award and incorporated into the contract by reference. The DD 254 is the authoritative document for classified-contract handling requirements; no classified PWS/SOW is complete without referencing it.
+  - **Security Classification Guide (SCG).** Reference the applicable SCG by title (or placeholder "[program-specific SCG to be identified in DD 254]") as the source for derivative-classification decisions.
+  - **Clearance by position and facility.** Identify the clearance level required for each position or position category (e.g., "all contractor personnel: Top Secret with SCI access"), the facility clearance requirement (e.g., ICD 705-accredited SCIF, Secret-cleared facility), and any program-specific access requirements (polygraph, NdA, read-on).
+  - **Derivative classification and OPSEC.** Incorporate EO 13526, the applicable ISOO regulations, and derivative classification training requirements (typically annual). Address OPSEC obligations.
+  - **Incident reporting.** Cite agency-specific classified-incident reporting timelines (typically 1 hour to the Government security officer).
+  - NISPOM applies to cleared contractor facilities; cite as applicable.
 
 **Section 10: Key Personnel**
 - Roles, minimum qualifications, certification requirements
 - Only roles where government needs approval of specific individuals
-- Include the FAR 52.237-2 substitution language: substitution of Key Personnel requires prior written approval of the Contracting Officer
+- Substitution language: state that substitution of any Key Personnel requires prior written approval of the Contracting Officer. **Do NOT cite FAR 52.237-2** — that clause is "Protection of Government Buildings, Equipment, and Vegetation" and has nothing to do with Key Personnel substitution. Instead cite the agency-appropriate clause:
+  - NASA contracts: NFS 1852.237-72 (Access to Sensitive Information) governs the Key Personnel substitution process
+  - DHS contracts: HSAR 3052.237-72 (Key Personnel or Facilities)
+  - HHS contracts: HHSAR 352.237-75 (Key Personnel)
+  - DoD contracts: agency-specific DFARS supplement clause if applicable
+  - Generic default when agency supplement is unknown: cite FAR 52.237-3 (Continuity of Services) for continuity obligations and leave the Key Personnel substitution as contract-specific custom language rather than a specific FAR 52 citation
+  - Never emit "FAR 52.237-2" as the Key Personnel substitution clause
 - **DO NOT include FTE counts, labor category counts, SOC codes, hours-per-year, staffing tables, or any "how many" information in Section 10 or anywhere else in the SOW/PWS body.** Key Personnel names ROLES (Program Manager, Technical Lead, Information Security Officer) with minimum qualifications — it does not quantify the workforce. FAR 37.102(d) requires the requirement to be described in terms of results, not hours or number of people performing the work. The Phase 3 staffing handoff table is for the IGCE Builder only, lives in chat output, and never appears in this document — not as a section, not as an appendix, not as a table at the bottom.
 
 **Section 11: Reporting and Oversight**
