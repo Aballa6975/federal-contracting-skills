@@ -70,6 +70,23 @@ response["aggregations"]["histogram_percentiles"]["values"]["50.0"]   # P50 (med
 response["aggregations"]["histogram_percentiles"]["values"]["75.0"]   # P75
 ```
 
+## Pre-flight Endpoint Check (do this first)
+
+Your first CALC+ query must return HTTP 200 with a `count` field somewhere in the response envelope (either `aggregations.wage_stats.count` or `hits.total.value`). Run one cheap query against the base URL before you batch:
+
+```python
+import urllib.request, json
+test_url = "https://api.gsa.gov/acquisition/calc/v3/api/ceilingrates/?keyword=software+developer&page_size=1"
+with urllib.request.urlopen(test_url, timeout=10) as resp:
+    assert resp.status == 200, f"Expected 200, got {resp.status}"
+    data = json.loads(resp.read())
+    assert "hits" in data or "aggregations" in data, "Wrong envelope; check base URL"
+```
+
+**If you get HTTP 404, you have the wrong base URL. Do NOT retry the same URL.** The current canonical base URL is `https://api.gsa.gov/acquisition/calc/v3/api/ceilingrates/`. Historical URLs that no longer resolve: `https://calc.gsa.gov/api/v3/api/ceilingrates/` (pre-consolidation), `https://calc.gsa.gov/api/v1/rates/` (v1 sunset). If an orchestration skill cites a different URL, use the one in this skill as authoritative and flag the drift.
+
+**If you get HTTP 503:** transient. Retry once with a 3-second sleep. If persistent, fall back to manual lookup at https://buy.gsa.gov/pricing/qr/mas.
+
 ## Quick Start: Distribution Snapshot
 
 The most common IGCE use case in one function. Pulls the canonical 7-statistic table.
@@ -145,18 +162,56 @@ def distribution_snapshot(query_mode, query_value, filters=None):
 
 Every stat lives under `aggregations`. A naive `data.get("wage_stats")` returns `None`. Print the response's `list(data.keys())` to verify envelope shape before indexing. Reading from the wrong path is the most common failure mode and it fails silently (returns `None`, not an error).
 
-### 2. Never use `keyword=` for rate statistics
+### 2. `keyword=` vs `search=` rules (know when each is acceptable)
 
-The `keyword=` parameter does wildcard matching across THREE fields simultaneously: `labor_category`, `vendor_name`, AND `idv_piid`. Use it only for scoping and discovery. For actual rate analysis, contamination is material.
+The `keyword=` parameter does wildcard matching across THREE fields simultaneously: `labor_category`, `vendor_name`, AND `idv_piid`. `search=labor_category:<exact>` matches a single field exactly.
+
+**Use `search=labor_category:<exact>` when:**
+- Evaluating a specific proposed vendor rate for price reasonableness (Workflow B rate validation)
+- Reporting statistics that will appear in a contract file as the primary benchmark
+- Any output where the reader expects a clean single-LCAT rate distribution
+
+**Use `keyword=` when (acceptable):**
+- Directional sanity-layer validation in an IGCE (divergence band checks: ±5% Expected, ±15% Cite, >15% Needs justification)
+- Corpus sizing to decide whether CALC+ has a defensible pool for an LCAT (N>100 is meaningful, N<30 is thin)
+- Discovering candidate LCAT bucket names before switching to `search=`
+
+In IGCE orchestration (FFP, LH/TM, CR), `keyword=` is the right tool for the sanity layer because you are not anchoring on CALC+ as the primary price basis; BLS is the primary. CALC+ is the cross-check. The keyword contamination that breaks a formal rate stat does not break a directional divergence check.
 
 **Example of contamination:** `keyword=Program Manager` returns 7,763 records. The sum of exact-match queries across all real Program Manager LCAT tiers (PM I, PM II, PM III, Senior PM, IT PM, Cloud PM, etc.) totals about 3,354. Over half the keyword hits are vendor-name matches or PIID token matches, not Program Manager labor categories. The keyword's $187 median is polluted; the exact-match median is $177 (PM exact) or $151 (PM I) or $203 (Senior PM) depending on seniority.
 
-**Use this pattern instead:**
+**For Workflow B (rate reasonableness), use this pattern:**
 ```
 1. suggest-contains=labor_category:<term>       # discover real LCAT titles
 2. search=labor_category:<exact bucket name>    # pull rate stats on each
 3. Compare across tiers; do NOT average the keyword= noise
 ```
+
+### 2a. CALC+ corpus has a structural skew (know which keywords are traps)
+
+The awarded-rate pool in CALC+ is dominated by GSA MAS IT Schedule 70 vendors at large primes. Generic labor-category keywords are contaminated by this tilt. Expect systematic over-statement when you use these keywords in DoD, logistics, physical-engineering, or non-IT contexts:
+
+| Keyword | Skew | What it actually captures |
+|---------|------|---------------------------|
+| `Program Manager` | +40% over DoD/civilian PM wage | Dominated by IT/cloud/cyber PMs at Tier 1 primes |
+| `Project Manager` | +15-25% over mid-metro rates | Same tilt, slightly less severe |
+| `Analyst` | +20% | Skews senior cyber/IT analysts |
+| `Engineer` | +15-30% | Dominated by IT, cloud, systems engineers |
+| `Architect` | +30% | IT and cloud architects dominate |
+| `Developer` / `Software Developer` | Representative | Well-populated pool, corpus matches |
+
+Underrepresented in CALC+ (expect thin pools or systematic understatement relative to BLS):
+
+- Logistics roles (13-1081, 13-1082 Logisticians)
+- DoD-specific acquisition roles (contract specialist, COR)
+- Physical engineering (17-2xxx series: mechanical, electrical, aerospace, nuclear)
+- Medical and research-lab roles (29-xxxx, 19-xxxx series)
+
+**Remediation for IGCE narrative:**
+
+1. If CALC+ divergence exceeds 15% on a keyword from the "trap" list, re-query with a narrower keyword (e.g., `DoD program manager`, `logistics program manager`) or switch to `search=labor_category:<exact>` on the top 2-3 buckets from `suggest-contains`.
+2. If CALC+ N is under 30 for the narrowed keyword, treat CALC+ as thin-pool. BLS is the primary anchor; cite CALC+ as sanity-only and document the pool thinness in the methodology.
+3. If the divergence is structural (PM role on a logistics contract → IT-PM-dominated corpus), document the corpus mismatch explicitly in the price reasonableness memo. Audit defensibility is: "CALC+ national pool does not match this labor context; BLS Metro P50/P75 is the defensible anchor."
 
 ### 3. Discover Labor Categories First (Before Anything Else)
 

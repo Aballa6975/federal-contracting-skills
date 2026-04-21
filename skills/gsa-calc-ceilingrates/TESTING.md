@@ -4,9 +4,9 @@
 
 ## The bottom line
 
-Independent testing in April 2026 (8 end-to-end runs, 112 binary assertions graded, 2 Claude models) shows the GSA CALC+ skill reliably pulls MAS ceiling rate distributions across four real-world federal acquisition workflows. Wave 1 testing surfaced a critical silent-wrong-answer bug in the skill's response schema documentation that was patched before publication. Post-patch validation on a second model confirmed the fix held.
+Independent testing in April 2026 (8 end-to-end runs, 112 binary assertions graded, 2 Claude models) shows the GSA CALC+ skill reliably pulls MAS ceiling rate distributions across four real-world federal acquisition workflows. Wave 1 testing surfaced a critical silent-wrong-answer bug in the skill's response schema documentation that was patched before publication. Post-patch validation on a second model confirmed the fix held. Round 3 patches shipped in April 2026 after findings surfaced during LH/T&M IGCE testing.
 
-**Wave 1 aggregate: 112/112 (100%).**
+**Wave 1 aggregate: 112/112 (100%). Round 3 patches shipped.**
 
 ## Scenarios tested and how reliably they work
 
@@ -173,15 +173,24 @@ Worker returned all three verbatim with correct line numbers. **Truncation is no
 - The `exclude` parameter for outlier removal
 - CSV export (`&export=y` parameter)
 
-## Round 3 patches queued
+## Round 3 patches shipped
 
-These emerged from Wave 1 Sonnet self-assessments and one Opus Round 2 finding. None block the current ship state.
+Triggered by findings during LH/T&M IGCE Wave 1 testing. Three Opus workers building LH and T&M IGCEs against San Diego, Huntsville, and Dayton MSAs surfaced consistent usage patterns that the skill did not address cleanly. Patches shipped April 2026.
 
-1. **Keyword contamination claim is overstated on common LCAT terms.** Opus Round 2 worker empirically proved the 7,763 "Program Manager" keyword hits reconcile entirely to `labor_category` buckets (top 100 + `sum_other_doc_count` long tail). The real contamination driver on common terms is tier conflation, not cross-field pollution. Refine the patch language: contamination is technically possible per the API spec but often negligible in practice.
-2. **Document methodology choice between keyword and exact match for same LCAT.** Sonnet S4 exact-match `search=labor_category:"Senior Software Developer"` got N=54; Opus S4 keyword search got N=145. Both defensible, different approaches. Dual-pool workflow should explicitly address this choice.
-3. **Verify whether `suggest-contains` bucket cap is configurable via `size` parameter.** Currently unknown; skill notes the 100-bucket observation but has not tested expansion.
-4. **Add `median_price` vs `histogram_percentiles["50.0"]` worked example.** Skill explains the interpolation difference in text; a numeric example on a known dataset would help COs defend the chosen value.
-5. **Add CO decision tree for pool selection.** When SOW language is title-weighted vs experience-weighted vs SIN-specific, which pool is the right anchor? Explicit flowchart would reduce methodology inconsistency across analysts.
+1. **`keyword=` vs `search=` rules clarified (Rule 2 rewritten).** Previous skill prohibited `keyword=` for rate statistics without distinguishing between formal rate analysis and directional sanity-layer validation in IGCE contexts. Rewritten to explicitly allow `keyword=` for: directional divergence band checks, corpus sizing, and discovery. `search=labor_category:<exact>` remains required for: specific vendor rate reasonableness (Workflow B), primary benchmarks in contract file output. Resolves contradiction between CALC+ skill and orchestration skills that use `keyword=` for sanity layer.
+
+2. **Pre-flight endpoint check added before Quick Start.** New section at top of skill requires a single cheap query to verify HTTP 200 + `count` field presence before batching. Documents the canonical base URL (`https://api.gsa.gov/acquisition/calc/v3/api/ceilingrates/`) and lists historical URLs that no longer resolve (`calc.gsa.gov/api/v3/...` and `calc.gsa.gov/api/v1/rates/`). LH/T&M Scenario 2 and Scenario 3 workers hit 404s from stale URLs cited in an orchestration skill; the pre-flight pattern makes the failure mode unmissable.
+
+3. **CALC+ corpus structural skew documented (Rule 2a added).** New rule tabulating keyword contamination direction and magnitude for common trap terms: `Program Manager` (+40% vs DoD/civilian PM wage, dominated by IT/cloud PMs at Tier 1 primes), `Analyst` (+20%, skews senior cyber/IT), `Engineer` (+15-30%, IT/cloud dominant), `Architect` (+30%), `Project Manager` (+15-25%). Lists underrepresented occupational families (logistics, DoD acquisition, physical engineering 17-2xxx, medical 29-xxxx, research lab 19-xxxx). Provides remediation protocol: narrow keyword → `suggest-contains` + `search=labor_category:<exact>` → thin-pool fallback language for N<30.
+
+## Round 4 patches queued
+
+None block current ship state.
+
+1. **Verify whether `suggest-contains` bucket cap is configurable via `size` parameter.** Currently unknown; skill notes the 100-bucket observation but has not tested expansion.
+2. **Add `median_price` vs `histogram_percentiles["50.0"]` worked example.** Skill explains the interpolation difference in text; a numeric example on a known dataset would help COs defend the chosen value.
+3. **Add CO decision tree for pool selection.** When SOW language is title-weighted vs experience-weighted vs SIN-specific, which pool is the right anchor? Explicit flowchart would reduce methodology inconsistency across analysts.
+4. **Document methodology choice between keyword and exact match for same LCAT.** Sonnet S4 exact-match got N=54; Opus S4 keyword search got N=145. Both defensible. Dual-pool workflow should explicitly address which to prefer in narrative when both are run.
 
 ## Independent grading methodology
 
