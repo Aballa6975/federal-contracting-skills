@@ -218,6 +218,11 @@ Order: federal acquisition markets first. Commercial metros follow for cross-met
 0010740 = Albuquerque, NM (Sandia, Kirtland AFB)
 ```
 
+**NASA research centers:**
+```
+0017410 = Cleveland-Elyria, OH (NASA Glenn Research Center)  -- renumbered from 17460 in May 2024 OEWS per OMB Bulletin 23-01
+```
+
 **Major commercial (for cross-metro comparisons):**
 ```
 0041860 = San Francisco-Oakland-Berkeley   0042660 = Seattle
@@ -245,7 +250,13 @@ Some area codes resolve to Combined Statistical Areas (CSAs) with different coun
 
 ### 2024 MSA realignment note
 
-OMB Bulletin 23-01 (2020 census) realigned MSA boundaries starting with May 2024 OEWS data. Same-code composition may differ from pre-2024 data. When comparing to older OEWS releases, verify the MSA's county composition hasn't changed. Pre-2024 trend analysis across the boundary is not reliable without explicit code-and-composition verification.
+OMB Bulletin 23-01 (2020 census) realigned MSA boundaries starting with May 2024 OEWS data. Three effects:
+
+1. **Some same-code MSAs changed composition.** Counties added or removed. Pre-2024 trend analysis across the boundary is unreliable without code-and-composition verification.
+2. **Some MSAs were RENUMBERED.** The code changed entirely. Example confirmed: Cleveland MSA moved from 17460 to 17410 with Ashtabula County added. A previously-valid 17460 query now returns NO_DATA silently.
+3. **Some MSAs were renamed.** Dayton-Kettering, OH changed naming conventions but may have retained code 19380 (worker-reported NO_DATA on 19380 in testing needs independent verification against current BLS release).
+
+**Silent-failure pattern to watch for:** if a previously-working MSA code returns NO_DATA across every SOC you query, the metro was renumbered. Do NOT assume BLS suppressed the occupation. Verify by querying a high-employment all-occupation series at the suspected new code, OR consult https://www.bls.gov/oes/current/oessrcma.htm for the current May 2024 area code list.
 
 Full current MSA list: https://www.bls.gov/oes/current/msa_def.htm
 

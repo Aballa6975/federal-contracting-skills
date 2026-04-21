@@ -218,17 +218,25 @@ Single Opus run validated Round 2 patches against a query specifically designed 
 
 **New finding from Wave 3 (Round 3 candidate):** Footnote code 8 ("Estimate not released" on employment count specifically) is not in the skill's Critical Rules table. Distinct from code 8-as-RSE>50% and code 5-as-cap. Shows up in real data. Queue for Round 3.
 
-## Round 3 patches queued
+## Round 3 patches shipped
 
-Not blocking ship. From Wave 3 Opus worker self-assessment:
+Shipped based on findings from IGCE FFP Wave 2 testing (April 2026) where an Opus worker burned significant time brute-force-scanning the BLS API to discover Cleveland's MSA code had been renumbered.
+
+1. **Cleveland MSA renumbered from 17460 to 17410.** Added Cleveland 0017410 to common metros under a new "NASA research centers" subsection with explicit annotation: "renumbered from 17460 in May 2024 OEWS per OMB Bulletin 23-01."
+2. **Expanded 2024 MSA realignment note** to document three distinct effects of OMB Bulletin 23-01: same-code composition changes, complete renumberings, and renamings. Added silent-failure pattern warning: if a previously-working MSA code returns NO_DATA across every SOC, the metro was renumbered. Do NOT assume BLS suppressed the occupation. Added BLS area code list URL as the canonical source.
+
+## Round 4 patches queued (not shipped)
+
+From earlier Wave 2 Opus self-assessments. None block current ship state.
 
 1. Add footnote code 8 to the rule table as a fourth distinct failure pattern (employment confidentiality suppression vs. RSE>50%).
 2. Note that cap variability within single-employer patterns is not uniform: Knoxville caps at P75, Idaho Falls publishes clean P90. Skill should instruct query-before-assuming.
-3. Expand `quick_wage_lookup` to include hourly datatypes, OR add `quick_full_distribution` sibling that pulls all 15 datatypes. Experienced user bypassed helpers for real IGCE work.
+3. Expand `quick_wage_lookup` to include hourly datatypes, OR add `quick_full_distribution` sibling that pulls all 15 datatypes.
 4. Burden multiplier table needs citations or "by contract vehicle" rows (GSA MAS 1.8-2.1x, DoE M&O 2.3-2.6x, SCIF/deployed 2.5-3.0x).
 5. Promote 1880 hours to default in workflow example (currently 2080 throughout).
 6. Add RSE interpretation rubric (<5% defensible without qualification, 5-15% cite with range, >15% directional only).
 7. Verify `detect_oews_year()` probe series against live BLS API.
+8. Verify Dayton 19380 + other potentially-renumbered 2023 OMB MSAs. Wave 2 worker observed Dayton returned NO_DATA on a brute-force scan but did not isolate the replacement code.
 
 ## Independent grading methodology
 
