@@ -89,9 +89,44 @@ def interpret_value(val, footnotes, datatype):
 
 # Example: Software Developers, DC metro
 # print(quick_wage_lookup("151252", prefix="OEUM", area="0047900"))
+
+
+def quick_full_distribution(occ_code, prefix, area, industry="000000"):
+    """Pull ALL 15 datatypes (annual + hourly percentiles + RSEs) in one call.
+
+    Use when the IGCE needs hourly percentiles directly (LH/T&M rate validation),
+    or when you need both annual and hourly views for cross-check.
+    """
+    datatypes = {
+        "01": "Employment",        "02": "Employment RSE %",
+        "03": "Hourly Mean",       "04": "Annual Mean",
+        "05": "Wage RSE %",
+        "06": "Hourly P10",        "07": "Hourly P25",
+        "08": "Hourly Median",     "09": "Hourly P75",   "10": "Hourly P90",
+        "11": "Annual P10",        "12": "Annual P25",
+        "13": "Annual Median",     "14": "Annual P75",   "15": "Annual P90",
+    }
+    series_ids = [f"{prefix}{area}{industry}{occ_code}{dt}" for dt in datatypes]
+    for sid in series_ids:
+        assert len(sid) == 25, f"Bad series ID length {len(sid)}: {sid}"
+    url = "https://api.bls.gov/publicAPI/v2/timeseries/data/" if BLS_API_KEY else "https://api.bls.gov/publicAPI/v1/timeseries/data/"
+    payload = {"seriesid": series_ids, "startyear": OEWS_CURRENT_YEAR, "endyear": OEWS_CURRENT_YEAR}
+    if BLS_API_KEY:
+        payload["registrationkey"] = BLS_API_KEY
+    req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'),
+                                 headers={'Content-Type': 'application/json'})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode())
+    results = {}
+    for s in data["Results"]["series"]:
+        dt = s["seriesID"][-2:]
+        if s["data"]:
+            entry = s["data"][0]
+            results[datatypes[dt]] = interpret_value(entry["value"], entry.get("footnotes", []), dt)
+    return results
 ```
 
-**What you get back:** a dict with 7 measures. Numeric values are formatted strings. Capped and suppressed values are returned as distinct labeled strings (critical for IGCE defensibility; see "Interpreting Capped Wages" below).
+**What you get back:** a dict with 9 measures from `quick_wage_lookup` or 15 from `quick_full_distribution`. Numeric values are formatted strings. Capped and suppressed values are returned as distinct labeled strings (critical for IGCE defensibility; see "Interpreting Capped Wages" below).
 
 ---
 
@@ -202,7 +237,7 @@ Order: federal acquisition markets first. Commercial metros follow for cross-met
 ```
 0017820 = Colorado Springs (Peterson/Schriever SFB, NORAD, USSPACECOM, Fort Carson)
 0026620 = Huntsville, AL (Redstone Arsenal, MDA, MSFC)
-0019380 = Dayton, OH (Wright-Patterson AFB, AFRL)
+0019430 = Dayton-Kettering-Beavercreek, OH (Wright-Patterson AFB, AFRL)  -- renumbered from 19380 in May 2024 OEWS per OMB Bulletin 23-01
 0036420 = Oklahoma City (Tinker AFB)
 0041700 = San Antonio (JBSA, 24th AF, NSA Texas)
 0036260 = Ogden-Clearfield, UT (Hill AFB, Ogden ALC)
@@ -253,8 +288,8 @@ Some area codes resolve to Combined Statistical Areas (CSAs) with different coun
 OMB Bulletin 23-01 (2020 census) realigned MSA boundaries starting with May 2024 OEWS data. Three effects:
 
 1. **Some same-code MSAs changed composition.** Counties added or removed. Pre-2024 trend analysis across the boundary is unreliable without code-and-composition verification.
-2. **Some MSAs were RENUMBERED.** The code changed entirely. Example confirmed: Cleveland MSA moved from 17460 to 17410 with Ashtabula County added. A previously-valid 17460 query now returns NO_DATA silently.
-3. **Some MSAs were renamed.** Dayton-Kettering, OH changed naming conventions but may have retained code 19380 (worker-reported NO_DATA on 19380 in testing needs independent verification against current BLS release).
+2. **Some MSAs were RENUMBERED.** The code changed entirely. Examples confirmed via live API (April 2026): Cleveland moved from 17460 to 17410 with Ashtabula County added. Dayton-Kettering moved from 19380 to 19430 and was renamed Dayton-Kettering-Beavercreek. Previously-valid 17460 and 19380 queries now return NO_DATA silently.
+3. **Some MSAs were renamed but kept their code.** Verify against https://www.bls.gov/oes/current/oessrcma.htm before assuming a rename changes the queryable code.
 
 **Silent-failure pattern to watch for:** if a previously-working MSA code returns NO_DATA across every SOC you query, the metro was renumbered. Do NOT assume BLS suppressed the occupation. Verify by querying a high-employment all-occupation series at the suspected new code, OR consult https://www.bls.gov/oes/current/oessrcma.htm for the current May 2024 area code list.
 
@@ -380,14 +415,41 @@ Do NOT use $239,200 as the point estimate. It is a floor, not the value.
 
 Both return `-` in the API response. Both look the same to a naive parser. They are different:
 
-| Pattern | Meaning | Usable? |
-|---------|---------|---------|
-| `-` with footnote code 5 (text contains "115.00" or "239,200") | CAP (top-coded) | Yes, as lower bound |
-| `-` with footnote "Estimate not released" | SUPPRESSED | No, unknown value |
-| `-` with footnote about RSE/sample size | SUPPRESSED | No, unknown value |
-| Empty `data` array, or "Series does not exist" | NOT PUBLISHED | Check area code, then try broader geography |
+| Pattern | Footnote code | Meaning | Usable? |
+|---------|---------------|---------|---------|
+| `-` with "115.00" or "239,200" in text | 5 | CAP (top-coded) | Yes, as lower bound |
+| `-` with "Estimate not released" text | 8 | SUPPRESSED (confidentiality or RSE) | No, unknown value |
+| Value `*` | 8 | RSE > 50% or <50 observations | No, unreliable |
+| Value `#` | (no code) | Estimate withheld | No, unknown |
+| Empty `data`, "Series does not exist" | (none) | NOT PUBLISHED | Check area code, then try broader geography |
+
+**Footnote code 8 covers both confidentiality suppression (single-employer-dominated occs) AND sample-size suppression (RSE>50%).** The text does not always distinguish them; treat both as unknown. Do not try to infer which subtype from text alone.
+
+### Cap variability within single-employer patterns is not uniform
+
+Two superficially similar metros can have very different cap behavior depending on how the dominant employer's payband interacts with the $239,200 ceiling:
+
+- **Knoxville, TN (ORNL/Y-12):** Nuclear Engineer P75 caps. P90 also caps. P50 and below publish.
+- **Idaho Falls, ID (INL):** Nuclear Engineer P90 publishes clean. P75 and below also clean.
+
+Do not assume "single-employer metro = capped percentiles everywhere." Query the actual percentile; if it caps, fall back per the decision tree above. If it publishes, use the value.
 
 The `interpret_value()` and `format_oes_value()` helpers handle all four cases. Both prefer footnote CODE matching (5 = cap) over text matching for durability against future BLS text reformatting; text match is a fallback. A naive parser that returns "Suppressed" for every `-` loses the cap vs. suppression distinction, which is the most common defensibility question in a BLS-based IGCE.
+
+---
+
+## Interpreting RSE (Relative Standard Error)
+
+Datatypes 02 (employment RSE) and 05 (wage RSE) report the coefficient of variation of the estimate. Lower is better; it tells you how much confidence to place on the point estimate.
+
+| RSE | Interpretation | IGCE defensibility |
+|-----|----------------|---------------------|
+| Less than 5% | Tight estimate | Cite the value as-is. No qualification needed. |
+| 5% to 15% | Moderate variance | Cite with a range: "BLS median $X ± $Y (RSE 10%)". Still defensible. |
+| Greater than 15% | Loose estimate | Directional only. Document as "indicative" in narrative. Consider falling back to a broader geography or parent SOC. |
+| At or near 50% | Unreliable | BLS flags with `*` value. Do not use. Fall back. |
+
+Always pull datatypes 02 and 05 alongside the wage measures. An IGCE that cites a P50 without its RSE is a black-box number. An IGCE that cites P50 with RSE 3.2% is auditable.
 
 ---
 
@@ -573,8 +635,12 @@ Optional. Call once per session if your work may run close to the May release da
 
 ```python
 def detect_oews_year(api_key=None):
-    """Probe API for newer data year. May be superseded by new release after April each year."""
-    probe_series = "OEUN000000000000000000004"  # national all-occs annual mean
+    """Probe API for newer data year. Probe series verified against live BLS API April 2026.
+
+    Probe is national all-occupations annual mean (`OEUN000000000000000000004`).
+    Returns current year if newer data available, else OEWS_CURRENT_YEAR.
+    """
+    probe_series = "OEUN000000000000000000004"  # national all-occs annual mean (verified)
     candidate = str(int(OEWS_CURRENT_YEAR) + 1)
     url = "https://api.bls.gov/publicAPI/v2/timeseries/data/" if api_key else "https://api.bls.gov/publicAPI/v1/timeseries/data/"
     payload = {"seriesid": [probe_series], "startyear": candidate, "endyear": candidate}
@@ -737,12 +803,14 @@ series_ids = [
 BLS annual wages assume 2,080 hours/year (standard work year). To convert to burdened hourly rate:
 
 ```python
-def bls_to_igce_rate(annual_wage, burden_multiplier=2.0, productive_hours=2080):
+def bls_to_igce_rate(annual_wage, burden_multiplier=2.0, productive_hours=1880):
     """Convert BLS annual wage to estimated fully burdened hourly rate.
 
-    productive_hours: 2080 = standard BLS work year (default; use for direct labor rate basis).
-                      1880 = contractor billable hours (accounts for ~200 hrs of PTO,
-                             holidays, training, sick). Use for contractor pricing.
+    productive_hours: 1880 = contractor billable hours (default; accounts for ~200 hrs of
+                             PTO, holidays, training, sick). Use for contractor pricing.
+                      2080 = standard BLS work year (use for direct-labor-rate basis only,
+                             or when comparing to BLS hourly percentiles which BLS itself
+                             calculates as annual/2080).
 
     Typical burden multipliers:
       1.5x-1.7x = Lean contractor
@@ -752,11 +820,27 @@ def bls_to_igce_rate(annual_wage, burden_multiplier=2.0, productive_hours=2080):
     """
     return round((annual_wage / productive_hours) * burden_multiplier, 2)
 
-# Software Developer DC median $138,410 at 2.0x burden, BLS 2080 hr basis = $133.09/hr
-# Same wage at 2.0x burden, contractor 1880 hr basis = $147.24/hr
+# Software Developer DC median $138,410 at 2.0x burden, 1880 hr basis = $147.24/hr (contractor)
+# Same wage at 2.0x burden, 2080 hr basis = $133.09/hr (BLS direct rate basis)
 ```
 
-Burden multiplier ranges above are practitioner consensus, not DCAA-certified. For defensibility in contested price negotiations, cite an actual vendor-specific wrap rate or published DCAA guidance, not just the skill default.
+### Burden multiplier by contract vehicle
+
+Practitioner consensus ranges vary materially by vehicle and environment. For defensibility in contested negotiations, cite an actual vendor-specific wrap rate, DCAA-disclosed indirect rate, or published agency guidance, not just the skill default.
+
+| Vehicle / environment | Burden range | Notes |
+|----------------------|--------------|-------|
+| GSA MAS (commercial) | 1.8x-2.1x | Ceiling-rate pricing; already includes profit |
+| GSA MAS (cleared services) | 2.0x-2.4x | Clearance overhead layered on MAS base |
+| Agency BPA / IDIQ (non-cleared) | 1.8x-2.2x | Mid-range professional services |
+| Agency BPA / IDIQ (cleared) | 2.2x-2.6x | TS/SCI cleared work in SCIF |
+| DoE M&O / FFRDC | 2.3x-2.6x | Lab overhead includes facility costs |
+| DoD prime (non-cleared) | 2.0x-2.4x | DCMA oversight + compliance |
+| DoD prime (SCIF / deployed) | 2.5x-3.0x | SCIF build-out, overseas, hazard |
+| OCONUS / hostile theater | 2.8x-3.5x | Hazard pay, austere-environment premiums |
+| R&D / BAA CR contracts | 2.0x-2.5x | Lower profit layer; fee separate on CR |
+
+Do not use these ranges as a substitute for a certified indirect rate when one is available. Treat them as sanity-check anchors for early-stage IGCE development.
 
 ---
 

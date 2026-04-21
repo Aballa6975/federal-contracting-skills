@@ -225,18 +225,18 @@ Shipped based on findings from IGCE FFP Wave 2 testing (April 2026) where an Opu
 1. **Cleveland MSA renumbered from 17460 to 17410.** Added Cleveland 0017410 to common metros under a new "NASA research centers" subsection with explicit annotation: "renumbered from 17460 in May 2024 OEWS per OMB Bulletin 23-01."
 2. **Expanded 2024 MSA realignment note** to document three distinct effects of OMB Bulletin 23-01: same-code composition changes, complete renumberings, and renamings. Added silent-failure pattern warning: if a previously-working MSA code returns NO_DATA across every SOC, the metro was renumbered. Do NOT assume BLS suppressed the occupation. Added BLS area code list URL as the canonical source.
 
-## Round 4 patches queued (not shipped)
+## Round 4 patches shipped
 
-From earlier Wave 2 Opus self-assessments. None block current ship state.
+All 8 items from Wave 2 Opus self-assessments now shipped. Two required live API verification (items 7 and 8), which was performed against the BLS public API in April 2026.
 
-1. Add footnote code 8 to the rule table as a fourth distinct failure pattern (employment confidentiality suppression vs. RSE>50%).
-2. Note that cap variability within single-employer patterns is not uniform: Knoxville caps at P75, Idaho Falls publishes clean P90. Skill should instruct query-before-assuming.
-3. Expand `quick_wage_lookup` to include hourly datatypes, OR add `quick_full_distribution` sibling that pulls all 15 datatypes.
-4. Burden multiplier table needs citations or "by contract vehicle" rows (GSA MAS 1.8-2.1x, DoE M&O 2.3-2.6x, SCIF/deployed 2.5-3.0x).
-5. Promote 1880 hours to default in workflow example (currently 2080 throughout).
-6. Add RSE interpretation rubric (<5% defensible without qualification, 5-15% cite with range, >15% directional only).
-7. Verify `detect_oews_year()` probe series against live BLS API.
-8. Verify Dayton 19380 + other potentially-renumbered 2023 OMB MSAs. Wave 2 worker observed Dayton returned NO_DATA on a brute-force scan but did not isolate the replacement code.
+1. **Footnote code 8 documented as distinct failure pattern.** Table now distinguishes four cases: CAP (code 5), SUPPRESSED (code 8, covers both confidentiality and RSE>50%), RSE flag (`*` value), and NOT PUBLISHED. Skill documents that code 8 text cannot always distinguish confidentiality vs sample-size suppression; treat both as unknown.
+2. **Cap variability within single-employer patterns** documented with Knoxville (P75 caps) vs Idaho Falls (P90 publishes clean) contrast. Skill now instructs workers to query before assuming the cap pattern.
+3. **`quick_full_distribution` sibling function added** to Quick Start. Pulls all 15 datatypes (annual + hourly percentiles + RSEs) in one call for LH/T&M rate validation or dual-view analysis.
+4. **Burden multiplier by contract vehicle table added** to IGCE Rate Derivation section. Nine rows: GSA MAS commercial/cleared, Agency BPA non-cleared/cleared, DoE M&O/FFRDC, DoD prime non-cleared/SCIF, OCONUS, R&D CR. Explicit disclaimer that these are anchors not certified rates.
+5. **1880 hours promoted to default** in `bls_to_igce_rate` function signature. 2080 moved to opt-in for direct-labor-rate basis only. Example output updated to show 1880 result first.
+6. **RSE interpretation rubric added** as new section. <5% cite as-is, 5-15% cite with range, >15% directional only, ~50% unreliable. Explicit instruction to pull RSE datatypes alongside wage measures for audit trail.
+7. **`detect_oews_year()` probe series verified against live BLS API** (April 2026). The 25-character `OEUN000000000000000000004` returns $67,920 for 2024 national all-occupations annual mean. Docstring updated with verification note.
+8. **Dayton MSA renumbering verified and shipped.** Dayton moved from 19380 to 19430 and was renamed Dayton-Kettering-Beavercreek per OMB Bulletin 23-01. Previous 19380 query returns "Series does not exist"; new 19430 returns $107,720 InfoSec Analyst median. Common metros table updated. 2024 MSA realignment note consolidated: both Cleveland (17460→17410) and Dayton (19380→19430) confirmed via live API.
 
 ## Independent grading methodology
 
