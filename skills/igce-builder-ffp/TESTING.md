@@ -4,9 +4,9 @@
 
 ## The bottom line
 
-Two waves of independent testing in April 2026 (12 end-to-end runs on Claude Opus 4.7 and Claude Sonnet 4.6, 168 binary assertions graded) show the IGCE Builder FFP skill reliably produces auditable Firm-Fixed-Price cost estimates across four distinct federal acquisition scenarios. Wave 1 (8 runs, 4 scenarios on both models) surfaced one failed assertion and a cluster of 17 cross-run quality issues with rate lookup reliability, shift coverage math, FFP-by-deliverable structure, and a silent-wrong-answer bug in the downstream CALC+ query signature. All 17 substrate patches shipped before Wave 2. Wave 2 (4 scenarios on Opus, covering the highest-leverage paths) passed 56 of 56 assertions.
+Three waves of independent testing across April 2026 (15 end-to-end runs on Claude Opus 4.7 and Claude Sonnet 4.6, 210 binary assertions graded) show the IGCE Builder FFP skill reliably produces auditable Firm-Fixed-Price cost estimates across four distinct federal acquisition scenarios. Wave 1 surfaced 17 cross-run quality issues, all patched. Wave 2 validated the patches. Wave 3 re-tested post-Round 4 substrate patches, surfaced three burden-band gaps, shipped Round 5 + Round 6 patches, and closed clean at 42/42.
 
-**Wave 1: 55/56 = 98% (Opus) with Sonnet parity on same matrix. Wave 2: 56/56 = 100% (Opus) after patches.**
+**Wave 1: 55/56 = 98% (Opus) with Sonnet parity. Wave 2: 56/56 = 100% (Opus) after 17 substrate patches. Wave 3: 42/42 = 100% (Opus) after Round 5 + Round 6 patches.**
 
 ## Scenarios tested and how reliably they work
 
@@ -171,16 +171,52 @@ Wave 2 Opus workers produced stronger output even on assertions that passed in W
 - International labor / EU wage data (BLS is US-only)
 - Uncertainty quantification beyond the three-scenario band (Monte Carlo, sensitivity analysis)
 
-## Round 3 patches queued (not shipped)
+## Wave 3 retest (post-Round 4 substrate validation)
 
-From Wave 2 Opus self-assessments. None block current ship state.
+Three Opus scenarios re-run against the patched skill in April 2026, same 42-assertion matrix as Wave 2. Scenarios re-exercised Dayton MSA renumbering (now BLS-patched), DoE M&O overhead environment, GSA MAS commercial burden preset, 0-night day trip, and the CALC+ dual-pool pattern.
 
-1. Adapt the FFP workflow patterns (shift coverage, rate validation band, CALC+ query signature, aging-as-formula, Step 9 present pattern) into IGCE Builder CR and IGCE Builder LH/T&M skills. Cost-reimbursement has layered cost pools instead of wrap rate, but the substrate patches apply identically.
-2. Add FFP-with-award-fee hybrid example to Quick Start. Users occasionally need FFP + award pool structure for incentive programs.
-3. Add uncertainty-quantification appendix with Monte Carlo method applied to the three-scenario band. Currently the low/mid/high is a point-estimate proxy for the distribution; an explicit sensitivity analysis would strengthen defensibility.
-4. Verify Dayton MSA 19380 status (BLS Wave 2 sanity check flagged potential renumbering; not isolated). If renumbered, add to BLS Round 4 and cross-reference here.
-5. SOW decomposition Workflow A+ currently validates with the user via AskUserQuestion but doesn't let the user edit LCATs in-line. Round 3 could add structured edit gate (add LCAT / rename LCAT / remove LCAT / split one LCAT into two) before proceeding to Step 1.
-6. Sheet 2 block layout formula `row(N) = 1 + (N-1) * 19` assumes 19-row blocks. If block row count changes, formula drifts. Add explicit row-count constant cell in the assumption block for future-proofing.
+| Scenario | Wave 2 | Wave 3 retest |
+|---|---|---|
+| S1 Wright-Patterson DoD Secret engineering | 13/14 | **14/14** |
+| S2 Oak Ridge DOE FFP-by-deliverable | 13/14 | **14/14** |
+| S3 NASA Glenn GSA MAS 24x7 SOC | 13/14 | **14/14** |
+| **Total** | **39/42 (93%)** | **42/42 (100%)** |
+
+**All three previously-failed burden-band assertions flipped to PASS after Round 5 patches shipped.** Zero regressions on the 39 previously-passing assertions.
+
+## Round 5 patches shipped (between Wave 2 and Wave 3 retest)
+
+1. **Wrap rate presets by contract vehicle** (10-row table) added to Information to Collect. Explicit instruction to ASK about contract vehicle before defaulting to skill mid. Covers GSA MAS commercial/cleared, Agency BPA non-cleared/cleared, DoD prime non-cleared/Secret/SCIF, DoE M&O/FFRDC, R&D CR, OCONUS.
+2. **DATEDIF formula fix.** Replaced malformed `YEAR(LEFT(B9,4))` (Excel can't apply YEAR to a string) with `(VALUE(LEFT(B10,4))-VALUE(LEFT(B9,4)))*12 + ...`. Every Wave 2 worker had to patch this in-place.
+3. **"Wait - 19 rows" drafting artifact removed.** Sheet 2 block layout now reads clean.
+4. **Cap decision tree extended for P75-also-capped case.** Knoxville Nuclear Sr / LANL physicist pattern. Skill now prescribes: use Mean when P75 caps, cross-reference commercial surveys, apply national P75/median ratio if deriving.
+5. **Contract start date default.** Auto-default to October 1 of next federal fiscal year, surfaced as blue-font editable cell. No more silent invention.
+
+## Round 6 patches shipped (Wave 3 retest findings)
+
+Independent workers in Wave 3 each caught the same math error in the Round 5 preset table's "Implied multiplier" column. Three workers independently computed the compounded arithmetic and flagged it.
+
+1. **Preset multiplier column math corrected** across all 10 vehicle rows. Example: GSA MAS commercial 30/60/10/8 was "~1.9x" (wrong); actual math `1.30 × 1.60 × 1.10 × 1.08 = 2.47x`. Corrected row-by-row. Added an explicit "Math check" line showing the compounding formula so builders can verify.
+2. **Vehicle-aware sanity band.** The generic 2.2x-3.5x commercial band misfires against cleared DoD and DoE M&O builds. Round 6 adds per-vehicle expected ranges: GSA MAS commercial 2.2-2.6x, DoD Secret non-SCIF 3.1-3.4x, DoE M&O 3.0-3.8x, etc. Flag for review only if MID falls outside its vehicle-specific band.
+3. **Sheet 5 day-trip IF branch.** Without `IF(B7=0, ...)` on rows 8 and 10, a day trip (Nights=0) silently produces 150% M&IE instead of the 75% single-partial-day per FTR 301-11.101. This is a workbook-level silent-wrong-answer bug. Template now shows the IF branch explicitly.
+4. **CALC+ discovery path added to JSON-paths block.** `aggregations.labor_category.buckets` with `key`/`doc_count` per bucket. Sits alongside the existing `wage_stats` and `histogram_percentiles` paths. Wave 3 S2 worker had to probe the raw response because this wasn't documented.
+5. **Text-starting-with-equals promoted to top-level silent-wrong-answer trap.** Previously buried under Sheet 2 formatting notes. Any cell starting with `=`, `+`, `-`, or `@` is parsed as a formula by Excel, applies to all sheets including Methodology prose.
+6. **Cross-sheet DL hourly reference index called out explicitly.** Wave 3 S1 worker hit a $16.9B fantasy total by indexing off row 4 (Aged Annual Wage) instead of row 5 (DL Hourly). Previously only the FBR index (18+i*19) was called out.
+
+## Round 7 patches queued (not shipped)
+
+None block current ship state.
+
+1. Named ranges instead of row-indexed cell references to eliminate row-drift fragility when title banners or extra preamble rows are added to Sheet 1.
+2. Mandatory Step 8.5 "Run recalc and verify" rather than parenthetical inside Step 8.
+3. Arithmetic consistency check before save (pick one LCAT, one scenario, verify FBR × hours × headcount equals Summary row).
+4. DoD cleared engineering worked example in Quick Start (exact Wave 3 S1 pattern).
+5. Thin-corpus CALC+ labeling rule: below ~25 records, label as "indicative only, not statistical validation."
+6. FFP-by-deliverable Structure B scaffolding expanded to match Structure A depth (CLIN column template, per-LCAT vs uniform formulas, worked example).
+7. RSE rubric propagated from BLS skill into FFP Methodology guidance (< 5% defensible, 5-15% cite with range, > 15% directional only).
+8. Adapt FFP workflow patterns into IGCE Builder CR and IGCE Builder LH/T&M skills (already done for 17 cross-cutting patches; Round 5/6 additions not yet ported).
+9. SOW decomposition Workflow A+ structured edit gate (add LCAT / rename LCAT / remove LCAT / split) before Step 1.
+10. Sheet 2 block size constant cell for future-proofing if block row count changes.
 
 ## Independent grading methodology
 

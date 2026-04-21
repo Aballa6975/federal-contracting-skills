@@ -107,11 +107,45 @@ Provide this when the user is unsure about cost pool rates:
 | G&A | 8% | 12% | 18% | Higher for large corporate structures |
 | Profit | 7% | 10% | 15% | FAR 15.404-4: risk, investment, complexity |
 
+### Wrap Rate Presets by Contract Vehicle
+
+**CRITICAL: ASK about contract vehicle before applying default wrap rates.** Workers have historically defaulted to skill mid (32/80/12/10, implied multiplier 2.93x) regardless of vehicle. That is correct for GSA MAS commercial or agency BPA non-cleared, but materially wrong for DoE M&O, cleared DoD, or OCONUS. Use this table to select MID scenario defaults keyed by the actual vehicle/environment the contract will use:
+
+| Vehicle / environment | Fringe | Overhead | G&A | Profit | Implied multiplier | Notes |
+|----------------------|--------|----------|-----|--------|-------------------|-------|
+| GSA MAS (commercial) | 30% | 60% | 10% | 8% | **2.47x** | SIN 520, 541611, etc. Ceiling-rate vehicle |
+| GSA MAS (cleared services) | 32% | 80% | 12% | 8% | **2.59x** | MAS with clearance overhead |
+| Agency BPA / IDIQ (non-cleared) | 32% | 75% | 12% | 10% | **2.53x** | Mid-range commercial services |
+| Agency BPA / IDIQ (cleared) | 32% | 95% | 12% | 10% | **2.91x** | TS/SCI in SCIF |
+| DoD prime (non-cleared) | 32% | 80% | 12% | 10% | **2.93x** | DCMA oversight standard |
+| **DoD prime (Secret, non-SCIF)** | **32%** | **100%** | **12%** | **10%** | **3.25x** | **Secret-cleared without SCIF** |
+| DoD prime (SCIF / deployed) | 32% | 120% | 14% | 10% | **3.67x** | Full SCIF buildout, TS/SCI |
+| **DoE M&O / FFRDC** | **35%** | **95%** | **12%** | **8%** | **3.18x** | **UT-Battelle, LANS, Sandia patterns; higher fringe, lower profit** |
+| R&D / BAA CR | 32% | 90% | 12% | 8% | **2.99x** | Lower profit layer; fee separate on CR |
+| OCONUS / hostile theater | 35% | 120% | 14% | 12% | **3.80x** | Hazard, austere env, insurance |
+
+**Math check:** Multipliers computed as `(1+fringe) × (1+OH) × (1+G&A) × (1+profit)`. Example GSA MAS commercial: 1.30 × 1.60 × 1.10 × 1.08 = 2.47x. Verify this arithmetic in your workbook; Methodology narrative must match the actual cell values, not a rounded guess.
+
+**Sanity band is vehicle-aware.** The generic 2.2x-3.5x "commercial CONUS" band does NOT apply to every vehicle. Vehicle-specific expected ranges:
+- GSA MAS commercial / Agency BPA non-cleared: 2.2x-2.6x
+- Agency BPA cleared / DoD non-cleared: 2.8x-3.0x
+- DoD Secret non-SCIF: 3.1x-3.4x
+- DoD SCIF / DoE M&O / R&D CR: 3.0x-3.8x
+- OCONUS / hostile theater: 3.5x-4.2x
+
+Flag for user review only if the MID multiplier falls OUTSIDE its vehicle-specific band. A 3.25x DoD Secret non-SCIF build is normal; a 3.25x GSA MAS commercial build is not.
+
+**Use the MID column as your scenario mid. Generate LOW as mid minus ~20% on each component, HIGH as mid plus ~20%.**
+
+If the user doesn't specify a vehicle, ASK before defaulting. If the user provides explicit rates, use those (custom rate workflow below).
+
 **Custom rate workflow:** When the CO provides explicit wrap rates (e.g., for cleared/SCIF environments), those rates ARE the mid-scenario estimate. Do NOT use skill defaults as mid and the CO's rates as a scenario variant. Instead:
 - Use CO-provided rates as MID scenario
 - Generate LOW as mid minus offset (e.g., 20% reduction on each component)
 - Generate HIGH as mid plus offset (e.g., 20% increase on each component)
 - Document the CO-provided rates as the authoritative basis
+
+These presets are anchors, not DCAA-certified rates. For final IGCE defensibility, prefer a certified indirect rate disclosure when available.
 
 ## Constants Reference
 
@@ -250,9 +284,15 @@ When mapping is ambiguous, query multiple SOC codes and present the range.
 
 Document this in Methodology as a convention, not a BLS standard. Percentile-based seniority modeling is defensible for price reasonableness but should be disclosed.
 
-**MSA code renumbering.** OMB Bulletin 23-01 (2020 census) renumbered some MSAs in the May 2024 OEWS release. Known examples: Cleveland 17460 → 17410. If a previously-valid MSA code returns NO_DATA across every SOC, the metro was renumbered - do NOT assume suppression. Check the current BLS area list or try adjacent codes. See the BLS OEWS skill's MSA realignment note.
+**MSA code renumbering.** OMB Bulletin 23-01 (2020 census) renumbered some MSAs in the May 2024 OEWS release. Confirmed via live BLS API (April 2026): Cleveland 17460 → 17410, Dayton 19380 → 19430. If a previously-valid MSA code returns NO_DATA across every SOC, the metro was renumbered - do NOT assume suppression. Check the current BLS area list or try adjacent codes. See the BLS OEWS skill's MSA realignment note.
 
 **Wage cap.** If BLS returns "-" with footnote code 5, the wage exceeds the $239,200 cap. Use the cap as a lower bound and flag in the narrative.
+
+**Cap decision tree when P75 ALSO caps.** In single-employer-dominated metros (ORNL/Y-12 Knoxville Nuclear, certain LANL/INL physicists), P90 and sometimes P75 both cap. The BLS skill's decision tree prescribes "use P75 when P90 is capped." When P75 is also capped:
+1. Use BLS **Mean** (datatype 04) as the senior-tier anchor. Document as "P75 capped, Mean used as uncapped senior anchor."
+2. Cross-reference commercial compensation surveys (Radford, Mercer, Payscale) for the specialty market.
+3. Apply national P75/median ratio to the local median as a derived P75 estimate. Document as derivation, not BLS figure.
+4. Never use $239,200 as the point estimate; it is a floor, not the value.
 
 ### Step 2B: Age BLS Wages to Contract Start Date
 
@@ -270,7 +310,7 @@ Example: if the contract start is 29 months after the BLS data vintage, at 2.5% 
 
 Use the aged wage as the basis for all subsequent calculations. Document the aging adjustment in the Methodology sheet: "BLS OEWS wages (data vintage: May 2024) aged forward [X] months to [contract start] at [escalation rate]%/yr to account for data lag."
 
-If the user does not provide a contract start date, ask for one. If unknown, default to 6 months from today and note the assumption.
+**Contract start date default.** If the user does not specify, default to October 1 of the next federal fiscal year (computed at build time). Surface the assumption in the Summary sheet as a blue-font editable cell. If the user clarifies later, changing the cell recalculates the aging factor and the entire workbook. Do NOT invent a start date silently without noting it in the output.
 
 **The aging factor must be a cell-referenced formula in the workbook, not hardcoded.** See Step 8 assumption block layout.
 
@@ -339,6 +379,12 @@ avg_rate = aggs["wage_stats"]["avg"]
 median   = aggs["histogram_percentiles"]["values"]["50.0"]   # CORRECT median
 p25      = aggs["histogram_percentiles"]["values"]["25.0"]
 p75      = aggs["histogram_percentiles"]["values"]["75.0"]
+
+# Discovery (suggest-contains) response shape:
+buckets = aggs["labor_category"]["buckets"]    # NOT aggs["results"] or aggs["suggestions"]
+for b in buckets:
+    name   = b["key"]          # bucket label
+    count  = b["doc_count"]    # records in that bucket
 ```
 
 **WARNING:** Do NOT read from `wage_percentiles` (empty when page_size=0). Always use `histogram_percentiles`. Do NOT read `wage_stats` from the top level - it lives under `aggregations`.
@@ -456,7 +502,7 @@ A7:  "Productive Hours/Year"         B7: 1880      (blue font)
 A8:  "Base Year Months"              B8: 12        (blue font)
 A9:  "BLS Vintage (YYYY-MM)"         B9: "2024-05" (blue font, text)
 A10: "Contract Start (YYYY-MM)"      B10: "2026-10" (blue font, text)
-A11: "Months Gap"                    B11: =DATEDIF(DATE(YEAR(LEFT(B9,4)),MONTH(RIGHT(B9,2)),1),DATE(YEAR(LEFT(B10,4)),MONTH(RIGHT(B10,2)),1),"m")
+A11: "Months Gap"                    B11: =(VALUE(LEFT(B10,4))-VALUE(LEFT(B9,4)))*12+(VALUE(MID(B10,6,2))-VALUE(MID(B9,6,2)))
 A12: "Aging Factor"                  B12: =(1+B6)^(B11/12)   (formula)
 A13: (blank row separator)
 A14: header row for data table
@@ -464,9 +510,9 @@ A14: header row for data table
 
 All labor formulas reference these cells, including the aging factor. If the user changes escalation rate, contract start, or BLS vintage, the entire workbook recalculates correctly.
 
-**Sheet 2: Cost Buildup.** One block per labor category. **Block spacing is 18 rows** (17 rows of content + 1 blank separator). First block starts at row 1; block N starts at row `1 + (N-1) * 18`.
+**Sheet 2: Cost Buildup.** One block per labor category. **Block spacing is 19 rows** (18 rows of content + 1 blank separator). First block starts at row 1; block N starts at row `1 + (N-1) * 19`. FBR is at `row(N) + 17` = `18 + (N-1) * 19`. Implied multiplier at `row(N) + 18` = `19 + (N-1) * 19`.
 
-Per-block layout (first block, rows 1-17):
+Per-block layout (first block, rows 1-19):
 
 ```
 Row 1:  "Cost Buildup: [Labor Category]"                     (bold header)
@@ -489,8 +535,6 @@ Row 17: A="Profit Amount"                B==B15*B16                (formula)
 Row 18: A="Fully Burdened Rate"          B==B15+B17                (formula, bold)
 Row 19: A="Implied Multiplier"           B==B18/B5                 (formula, 0.00"x")
 ```
-
-Wait - that's 19 rows for the first block. Corrected block size: **19 rows per block (17 content + 2 headers/separator)**. Block N starts at row `1 + (N-1) * 19`. FBR at `row(N) + 17` = `18 + (N-1) * 19`. Implied multiplier at `row(N) + 18`.
 
 Cross-sheet references from Sheet 1 point to the FBR row: `='Cost Buildup'!$B$X` where X = `18 + (labor_category_index - 1) * 19`.
 
@@ -525,15 +569,17 @@ Row 3:  A="Fiscal Year"           B=<current federal FY>          (blue font)
 Row 4:  A="Nightly Lodging Rate"  B=[max monthly]                 (blue font)
 Row 5:  A="M&IE Daily Rate"       B=[rate]                        (blue font)
 Row 6:  A="First/Last Day M&IE"   B==B5*0.75                      (formula)
-Row 7:  A="Nights per Trip"       B=[nights]                      (blue font)
-Row 8:  A="Travel Days"           B==B7+1                         (formula)
-Row 9:  A="Lodging per Trip"      B==B4*B7                        (formula)
-Row 10: A="M&IE per Trip"         B==B5*MAX(0,B8-2)+B6*2          (formula)
+Row 7:  A="Nights per Trip"       B=[nights, 0 for day trip]       (blue font)
+Row 8:  A="Travel Days"           B==IF(B7=0,1,B7+1)              (formula)
+Row 9:  A="Lodging per Trip"      B==B4*B7                        (formula, 0 when nights=0)
+Row 10: A="M&IE per Trip"         B==IF(B7=0,B6,B5*MAX(0,B8-2)+B6*2)  (formula)
 Row 11: A="Trip Total"            B==B9+B10                       (formula)
 Row 12: A="Trips per Year"        B=[trips]                       (blue font)
 Row 13: A="Travelers"             B=[count]                       (blue font)
 Row 14: A="Annual Travel Cost"    B==B11*B12*B13                  (formula, bold)
 ```
+
+**Day-trip branch required.** Without the `IF(B7=0,...)` branches on rows 8 and 10, a day trip (Nights=0) produces 150% M&IE instead of the correct 75% single-partial-day per FTR 301-11.101. This is a silent wrong-answer bug at the workbook level; do not skip the IF branches even if all planned trips are overnight.
 
 **Sheet 6: Methodology.** FFP-specific narrative for the contract file. Include:
 - Wrap rate buildup with each cost pool explained
@@ -604,8 +650,11 @@ The skill is not complete until the file is delivered. Do not rely on the user a
 **Silent-wrong-answer traps:**
 - `q=` parameter on CALC+ returns the full 265K-record corpus silently. Always use `keyword=` or `search=`.
 - `wage_stats` read from top level returns None. Always read from `aggregations.wage_stats`.
-- MSA code renumbering (Cleveland 17460 → 17410) returns NO_DATA silently. Verify code if all datatypes return empty.
+- CALC+ discovery buckets live at `aggregations.labor_category.buckets`, each with `key` and `doc_count`. NOT `aggregations.results` or `aggregations.suggestions`.
+- MSA code renumbering (Cleveland 17460 → 17410, Dayton 19380 → 19430) returns NO_DATA silently. Verify code if all datatypes return empty.
 - BLS SOC with trailing zeros (151212 vs 15121200) fails the 25-char assertion AFTER you've already constructed several queries. Use exactly 6-char SOC.
+- **Text starting with `=`, `+`, `-`, or `@` in ANY cell** is parsed as a formula by Excel. This applies to Methodology prose, labels, and source citations - not just Sheet 2 annotations. Prefix with a space or lead with a non-operator character.
+- **Cross-sheet row index off-by-one on the DL hourly reference.** Row 4 of each Cost Buildup block is Aged Annual Wage; row 5 is Direct Labor Rate (Hourly). Scenario formulas and rate validation formulas that reference the DL hourly rate must use `5 + (i-1)*19`, NOT `4 + (i-1)*19`. Indexing off row 4 produces workbook totals in the billions because annual wage × hours is dimensionally wrong.
 
 ## What This Skill Does NOT Cover
 
