@@ -81,6 +81,35 @@ NSA rate + standard rate both returned. Prefer the non-standard entry.
 ### 7. Fiscal Year, Not Calendar Year
 The federal fiscal year runs October through September. A date in the first calendar quarter (January-March) is still in the fiscal year that began the prior October. Compute the current FY at query time; do not hardcode.
 
+### 7a. Target FY Not Yet Published: Fall Back to Current FY (do NOT treat as "no per diem")
+
+GSA publishes the new fiscal year rates in **mid-to-late August** of the prior FY, effective October 1. A contract starting October 1 queried before the ~August publication window will hit **`200 OK` with an empty `rates: []` array for the target FY.** The API does not raise an error. Workers who treat this as "no per diem exists for this location" produce IGCEs with zero travel cost.
+
+**Rule: if the target FY returns an empty rates array, fall back to the most recently published FY and annotate the vintage in methodology.**
+
+```python
+def get_perdiem_with_fy_fallback(city, state, target_fy, api_key="DEMO_KEY"):
+    """Query target FY; fall back to previous FY if not yet published.
+
+    Returns: (fy_used, response) tuple. Caller should document fy_used in narrative.
+    """
+    response = get_perdiem_city(city, state, target_fy, api_key)
+    rates = response.get("rates", [])
+    has_data = rates and rates[0].get("rate")
+    if has_data:
+        return (target_fy, response)
+    # Fall back
+    fallback_fy = target_fy - 1
+    response = get_perdiem_city(city, state, fallback_fy, api_key)
+    return (fallback_fy, response)
+```
+
+**Methodology narrative requirement when fallback fires:**
+
+"GSA Per Diem FY[target] not yet published at query time (GSA publishes new FY rates ~August of the prior FY). FY[fallback] rates used as most recent published; travel costs escalated to target FY at the contract's stated escalation rate."
+
+Apply your contract's escalation rate to the fallback rates to produce a target-FY travel estimate. Do NOT carry fallback-FY rates as-is into a contract that starts mid-fallback-FY or later; that systematically understates travel by 2-5% per year of lag.
+
 ### 8. Seasonal Lodging Variations
 Many NSAs vary by month (DC: $183-$276). M&IE does NOT vary seasonally. Retrieve all 12 months for multi-month estimates.
 
