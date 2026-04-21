@@ -76,7 +76,7 @@ Ask for everything in a single pass. Provide defaults where noted.
 | Labor categories | Job titles or SOC codes | Software Developer, InfoSec Analyst, PM |
 | Performance location | City/state or metro area | Washington, DC |
 | Staffing | Headcount per labor category | 2 developers, 1 analyst, 1 PM |
-| Hours per year | Productive hours per person (default: 1,880) | 1,880 |
+| Hours per year | Productive hours per person (default: 1,880; user input wins, see rule below) | 1,880 |
 | Period of performance | Base year + option years | Base + 2 OYs |
 | Contract start date | For wage aging | 2026-10-01 |
 
@@ -98,6 +98,30 @@ Ask for everything in a single pass. Provide defaults where noted.
 | PSC code | None | Include in output if provided |
 | Partial start | Full year (12 months) | Specify months if base year is partial |
 | Materials (T&M only) | None | Categories and estimated annual costs |
+
+### Productive Hours Reconciliation (user input wins)
+
+When the user provides productive hours per FTE (commonly 1,920 = 48 × 40, or 1,860 for heavy leave environments), USE THE USER VALUE. Do NOT silently replace with 1,880.
+
+- If user gives `total_hours` and `fte` but not `productive_hours`, back-solve: `productive_hours = total_hours / fte`. If result deviates from 1,880 by more than 5%, flag in methodology.
+- If user gives `productive_hours` directly in the handoff, use verbatim.
+- Example formulas in this skill use 1,880 for illustration only. Do NOT hardcode 1,880 in your Sheet 1 formulas; reference `$B$6` (the user-provided or default value) instead.
+
+### Contract Vehicle Usage Rule (burden multiplier tuning)
+
+The vehicle collected in Required Inputs is NOT metadata only. It tunes the burden scenario range:
+
+| Vehicle | Low | Mid | High | Notes |
+|---------|-----|-----|------|-------|
+| GSA MAS IT Schedule 70 (commercial) | 1.8 | 2.0 | 2.2 | Standard commercial IT services |
+| OASIS+ (services-centric, commercial) | 1.9 | 2.1 | 2.3 | Slightly higher due to multi-agency overhead |
+| Agency-specific IDIQ (cleared / DoD) | 2.0 | 2.2 | 2.4 | Cleared personnel, security overhead |
+| DoD Secret cleared (SCIF-adjacent but not SCIF) | 2.2 | 2.4 | 2.6 | Facility clearance, compartmented work |
+| SCIF-only (TS/SCI, compartmented) | 2.4 | 2.6 | 3.0 | SCIF facility overhead, TS/SCI eligibility premium |
+| DoE M&O contract | 2.2 | 2.4 | 2.6 | M&O overhead structure |
+| OCONUS | 2.6 | 2.9 | 3.2 | Hardship, foreign deployment |
+
+If the user provides a vehicle not in the table, default to GSA MAS commercial and flag the assumption in methodology.
 
 ### Burden Multiplier Guidance
 
@@ -223,6 +247,35 @@ Map user job titles to SOC codes. Apply domain triage from Step 0 first.
 
 When mapping is ambiguous, query multiple SOC codes and present the range. PM mapping is context-dependent: do NOT default to 11-3021 for non-IT programs.
 
+**PM mapping decision rule (addresses the -21% CALC+ divergence trap on 15-1299):**
+
+| Context | Default SOC | Why |
+|---------|-------------|-----|
+| IT task order PM at DoD/IC installation | 11-3021 Computer and Information Systems Managers | Matches the IT PM labor pool in CALC+; validates within ±5% |
+| IT task order PM at civilian agency | Pull BOTH 11-3021 and 13-1082; pick the one with <15% CALC+ divergence | Civilian agency mix varies |
+| Physical engineering PM / hardware program | 11-9041 Architectural and Engineering Managers | DoE M&O, hardware programs, aerospace |
+| Non-IT operations PM | 11-1021 General and Operations Managers | Ops / logistics / services |
+| Technical-but-not-IT PM at DoD | 13-1082 Project Management Specialists | Specialty services, not tech-stack focused |
+
+Do NOT default to 15-1299 (Computer Occupations, All Other) for IT PM. It under-represents DoD IT PM wages by ~20% vs CALC+.
+
+**Network Engineer SOC disambiguation:**
+
+| Title / Scope | SOC | Note |
+|---|---|---|
+| Network Engineer (design / architecture / enterprise redesign) | 15-1241 Computer Network Architects | Default; higher wage (~25% above sysadmin) |
+| Network Engineer (ops / sysadmin / NOC tier 2-3) | 15-1244 Network and Computer Systems Administrators | Use when PWS scope is operations-heavy |
+
+Default to 15-1241 (conservative) unless the PWS specifies operations/sysadmin scope. Document the choice and the alternative in the Raw Data sheet.
+
+**Seniority inference when no tier label:** The user may provide a role title without an explicit "Junior/Mid/Senior" qualifier (e.g., "Project Manager," "Cybersecurity Engineer"). Default to P50 (median). Exception: **when the role is a PM on a technical or cleared contract (DoD, IC, cyber), default to P75.** The cleared-contract PM pool skews senior; P50 understates. Cite the basis in methodology.
+
+**Divergence-triggered SOC re-pick (automate what manual analysis does):**
+
+If an LCAT's BLS burdened rate shows >15% divergence vs CALC+ median AND the SOC was a judgment call (not user-specified), automatically pull alternative SOCs per the decision rules above, compute divergence for each, and pick the one that validates within ±15%. Retain all queried SOCs (including rejected alternatives) in the Raw Data sheet for defensibility; document the winner and the losers in Methodology.
+
+**Raw Data sheet retention requirement:** The Raw Data sheet MUST include every SOC queried, including rejected alternatives. Example: if you initially pulled 15-1299 for IT PM, got -21% divergence, and switched to 11-3021, the Raw Data sheet shows BOTH series ID queries with the returned wages, not just the winner. This is audit-defensibility material.
+
 ### Step 2: Pull BLS Wage Data
 
 **Use the BLS OEWS API skill.** For each labor category, query datatypes 04 (annual mean), 11-15 (10th through 90th percentiles) at the performance location.
@@ -287,17 +340,15 @@ Note: 2,080 converts annual to hourly. Productive hours (1,880) are used separat
 
 ### Step 4: Cross-Reference Against CALC+
 
-**Use the GSA CALC+ Ceiling Rates API skill.**
+**Invoke the GSA CALC+ Ceiling Rates API skill per its own documentation for base URL, pre-flight endpoint check, and `keyword=` vs `search=` rules.** Do NOT hardcode a CALC+ URL in this skill's code blocks; the CALC+ skill is authoritative and has moved endpoints in the past.
 
-**CRITICAL: Use the correct query signature or you will get silent wrong answers.**
+**IGCE use case for CALC+:** directional sanity-layer validation of BLS-burdened rates against GSA MAS awarded ceiling pool. `keyword=` is acceptable here per the CALC+ skill (sanity layer, not formal rate statistics). Full endpoint base URL, response envelope shape, and corpus skew guidance all live in the CALC+ skill.
 
-**Endpoint:** `https://calc.gsa.gov/api/v3/api/ceilingrates/`
-**Parameter:** `keyword=` (NOT `q=`; `q=` returns the full 265K-record corpus silently)
-**Fetch aggregations:** `page_size=0`
+**Fetch aggregations only:** `page_size=0` (aggregations compute over the full result set regardless of page_size).
 
-Example:
+Example call pattern (resolve actual base URL from the CALC+ skill at invocation time):
 ```
-GET https://calc.gsa.gov/api/v3/api/ceilingrates/?keyword=Software+Developer&page_size=0
+GET {CALC_BASE_URL}?keyword=Software+Developer&page_size=0
 ```
 
 **CRITICAL JSON paths for CALC+ statistics:**
@@ -393,6 +444,15 @@ T&M contracts reimburse materials at cost per FAR 16.601(b). Skip this step for 
 
 **CRITICAL: Materials are NOT affected by the burden multiplier.** They are reimbursed at cost. Burden only applies to labor. Keep materials and labor cost streams separate in all formulas.
 
+**Materials Handling Fee Decision Gate (REQUIRED for T&M):**
+
+FAR 16.601(b)(2) lets the contractor recover actual cost for materials. FAR 31.205-26(e) permits a reasonable material handling fee IF the contractor's indirect rates already include such costs. Most T&M IGCEs default to pure at-cost with no handling fee. But the decision must be surfaced, not silently defaulted. Before computing materials totals, explicitly state:
+
+- **Default choice: pure at-cost (no handling fee).** Document in methodology: "Materials priced at cost per FAR 16.601(b)(2). No material handling fee applied. If the awarded contractor has a DCAA-approved material handling rate in their indirect pools, the government may apply it post-award; IGCE remains at cost as the cost-side baseline."
+- **Alternative: include a handling fee** if the solicitation specifically contemplates one or the user asks. Handling fee cap: commonly 5-10% of materials cost; never apply G&A or profit on top of the fee. Cite FAR 31.205-26 in methodology.
+
+Ask the user explicitly if the contract anticipates a handling fee before applying one. If not surfaced, default to at-cost with the methodology note above. Silent defaults are the failure mode.
+
 **Materials in IGCE Summary (Sheet 1):**
 ```
 Materials Subtotal       |     |         | $45,000    | $46,125    | $47,278    | $138,403
@@ -445,7 +505,7 @@ Generate a multi-sheet .xlsx workbook using openpyxl. Use Excel formulas for all
 
 **Sheet 1: IGCE Summary.** Labor categories as rows, periods as columns. Qty, Rate/Hr, annual cost per period. Travel rows below labor. For T&M: Materials rows below travel. Placeholder rows for Airfare, Ground Transportation, ODCs as numeric 0 (NOT text "TBD") to prevent #VALUE! errors in SUM formulas. Grand total with SUM formulas.
 
-**Assumption cell layout (Sheet 1, rows 1-11):**
+**Assumption cell layout (Sheet 1, rows 1-11) — LOCK THIS EXACTLY:**
 ```
 A1: "IGCE Assumptions"                         (bold, merged A1:B1)
 A2: "Burden Multiplier (Low)"                  B2: 1.8     (blue)
@@ -462,19 +522,35 @@ A12: (blank row separator)
 A13: header row for data table
 ```
 
-All labor formulas reference $B$3 (mid burden). Sheet 2 references $B$2, $B$3, $B$4 for scenarios. Base year formulas reference $B$7 for proration. All wages reference `$B$11` aging factor.
+**DOWNSTREAM CELL REFERENCES — MEMORIZE THESE; DO NOT DRIFT:**
 
-**Sheet 2: Scenario Analysis.** Three side-by-side tables (low/mid/high burden). Burden multiplier cells in blue font. Blocks are 12 rows each per LCAT (10 content + 2 separator).
+```
+$B$2 = Burden Low                    (Sheet 2 low scenario formulas)
+$B$3 = Burden Mid                    (Sheet 1 burdened-rate formulas + Sheet 2 mid)
+$B$4 = Burden High                   (Sheet 2 high scenario formulas)
+$B$5 = Escalation Rate               (ALL option-year AND materials formulas)
+$B$6 = Productive Hours/Year         (reference only; do NOT put in formulas)
+$B$7 = Base Year Months              (base-year proration as $B$7/12)
+$B$11 = Aging Factor                 (multiplies ALL raw BLS wages)
+```
 
-**Block layout formula:** `row(N) = 1 + (N-1) * 12` where N is the LCAT index. Within each block:
-- BLS Base Wage (aged) at offset +1
-- Hourly base (annual / 2080) at offset +2
-- Burdened low at offset +3 (hourly × $B$2)
-- Burdened mid at offset +4 (hourly × $B$3)
-- Burdened high at offset +5 (hourly × $B$4)
-- Annual cost low/mid/high at offsets +7/+8/+9
+**Validation gate: before writing Sheet 1 formulas, paste the reference map above into your working notes.** Workers have shipped off-by-one bugs where `$B$4` was treated as escalation (actually High burden) and `$B$6` as Base Year Months (actually Productive Hours). One scenario produced a $105M/FTE base year before the worker caught the drift on value inspection. Recalc does not detect this because the formulas are syntactically valid; they just reference the wrong cells.
 
-Travel and materials identical across scenarios. Summary row: "Range: $X (low) to $Y (high), Mid estimate: $Z."
+**Sheet 2: Scenario Analysis.** Three side-by-side tables (low/mid/high burden). Burden multiplier cells in blue font. Blocks are 15 rows each per LCAT (13 content + 2 separator).
+
+**Block layout formula:** `row(N) = 1 + (N-1) * 15` where N is the LCAT index. Within each block (offsets from block top):
+- +1: LCAT header (merged)
+- +2: "Measure" | "Value" | blank | "Period" | Low | Mid | High
+- +3: BLS Base Annual Wage (hardcoded from raw BLS pull)
+- +4: Aged to Contract Start (= base × aging_factor)
+- +5: Hourly base (annual / 2080)
+- +6: Burdened Low (= hourly × $B$2)
+- +7: Burdened Mid (= hourly × $B$3)
+- +8: Burdened High (= hourly × $B$4)
+- +10 through +13: period rows (Base, OY1, OY2, OY3) × three burden columns
+- +14: Total row (SUM of +10 through +13)
+
+Travel and materials identical across scenarios. Summary row at the bottom: "Range: $X (low) to $Y (high), Mid estimate: $Z."
 
 **Annotation text gotcha:** Annotation cells (column C or D methodology notes) cannot START with `= + - @` or Excel tries to parse as a formula. Prefix with apostrophe (`'=2,080 hours/year`) or lead with a non-operator character (`"Note: 2,080 hours/year"`). Applies anywhere a cell value starts with those four characters.
 
@@ -509,7 +585,40 @@ Row 13: A="Travelers"            B=[count]                       (blue)
 Row 14: A="Annual Travel Cost"   B==B11*B12*B13                  (formula, bold)
 ```
 
-**Sheet 5: Methodology.** Narrative for the contract file. Include: data sources with vintages (BLS OEWS [data vintage], CALC+ queried [date], Per Diem [current FY]), BLS aging adjustment (months_gap, aging_factor), shift coverage FTE math if 24x7, burden multiplier rationale plus scenario range, escalation basis, productive hours assumption, partial-year proration if applied, travel calculation methodology (including 0-night day trips if applicable), what is NOT included, CALC+ cross-reference with endpoint/keyword cited, divergence explanations, NAICS/PSC if provided, contract type (LH or T&M), FAR 15.402 and FAR 15.404-1(b) references. For T&M: note materials reimbursed at cost per FAR 16.601(b)(2), government right to require competition for materials over SAT.
+**Sheet 5: Methodology.** Narrative for the contract file.
+
+**Important: do NOT merge section-header cells if you also write to column B on the same row.** openpyxl raises "'MergedCell' object attribute 'value' is read-only" when a merge covers A:C and then a write targets B of the merged range. Two-column label/value layout: put section headers on their own rows (no merge), then use adjacent A/B rows for label/value pairs.
+
+**Required sections in methodology:**
+
+- Contract type (LH or T&M) with FAR citation
+- Regulatory basis (use the citation set below)
+- Vehicle / NAICS / PSC (if provided)
+- Performance location
+- Period of performance
+- Data sources with vintages (BLS OEWS [data vintage], CALC+ queried [date], Per Diem [current FY])
+- SOC code mapping decisions (note any alternatives pulled and why the chosen one won)
+- BLS aging adjustment (months_gap, aging_factor, formula reference)
+- Productive hours assumption (cite PWS-provided value if applicable)
+- Burden multiplier rationale plus scenario range
+- Escalation basis
+- Partial-year proration if applied
+- Travel calculation methodology (including 0-night day trips if applicable)
+- Rate validation (CALC+) with divergence explanations
+- What is NOT included (airfare, ground, subcontractor, etc.)
+- Limitations and caveats
+
+**FAR citation set (use all applicable):**
+
+- **FAR 15.402** (cost and pricing data): always cite for IGCE defensibility
+- **FAR 15.404-1(b)** (price analysis): always cite
+- **FAR 16.601** (T&M and LH contracts): always cite for this skill
+- **FAR 16.601(b)(2)** (T&M only; materials reimbursed at cost): cite when materials present
+- **FAR 16.601(c)(3)** (T&M surveillance requirement): REQUIRED in T&M methodology. Must explicitly acknowledge: "FAR 16.601(c)(3) requires appropriate government surveillance during performance to provide reasonable assurance that efficient methods and effective cost controls are used. The awarded contract file should document the surveillance plan."
+- **FAR 31.205-46** (travel costs): REQUIRED when travel is in scope. Cite alongside FTR 301-11.101 for the 75% first/last-day M&IE rule.
+- **FAR 31.205-26** (material costs): cite if a material handling fee is applied (see Step 5B).
+
+**Labor Category Ceiling Hours requirement (LH and T&M per FAR 16.601(c)(2)):** Sheet 1 labor table already shows hours per LCAT. Methodology should annotate: "Labor Category Ceiling Hours presented per FAR 16.601(c)(2); contract ceiling hours per LCAT are binding NTE limits for solicitation purposes."
 
 **Sheet 6: Raw Data.** All API query parameters and responses: BLS series IDs, CALC+ keyword + endpoint + record counts, per diem query details, City Pair fares if retrieved.
 
@@ -528,6 +637,69 @@ Row 14: A="Annual Travel Cost"   B==B11*B12*B13                  (formula, bold)
 When base year is partial, prorate: `=burdened_rate*$B$6*($B$7/12)*headcount`. Travel and materials prorate the same way. Full option years ignore $B$7.
 
 Never output as .md or HTML unless explicitly requested.
+
+### Step 8.5: Post-Recalc Sanity Gates (REQUIRED before presenting)
+
+`recalc.py` returning zero formula errors is necessary but NOT sufficient. Syntactically valid formulas can reference the wrong cells and produce wildly wrong values. Run ALL three of these checks before calling `present_files`. If any fails, fix and re-run all three.
+
+**Gate 1: Per-FTE annualized cost in defensible range.**
+
+Pick the first LCAT in the workbook. Compute its base-year cost divided by its FTE count. The result MUST fall in `[100,000, 1,000,000]` dollars. Outside this range, the formulas are almost certainly referencing wrong cells.
+
+```python
+from openpyxl import load_workbook
+wb = load_workbook(workbook_path, data_only=True)  # data_only=True reads cached formula values post-recalc
+summary = wb["IGCE Summary"]
+# Find the first LCAT row (below assumption block; check your actual row numbers)
+first_lcat_fte = summary["C14"].value    # adjust to your LCAT column/row
+first_lcat_base_cost = summary["F14"].value
+per_fte = first_lcat_base_cost / first_lcat_fte if first_lcat_fte else 0
+assert 100_000 <= per_fte <= 1_000_000, f"Per-FTE ${per_fte:,.0f} outside defensible range; check cell references"
+```
+
+A failed gate means your Sheet 1 formulas are likely referencing the wrong assumption cells. Review the DOWNSTREAM CELL REFERENCES map above and re-check every $B$n reference.
+
+**Gate 2: Sheet 1 Grand Total == Sheet 2 Mid-Scenario Grand Total.**
+
+Sheet 1's grand total and Sheet 2's mid-scenario grand total must match within $0.01. Divergence indicates the sheets are pulling from different assumption cells.
+
+```python
+sheet1_total = wb["IGCE Summary"]["F30"].value   # adjust to your grand total cell
+sheet2_total = wb["Scenario Analysis"]["F15"].value  # adjust to mid-scenario total cell
+assert abs(sheet1_total - sheet2_total) < 0.01, f"Sheet 1 ({sheet1_total}) != Sheet 2 Mid ({sheet2_total})"
+```
+
+**Gate 3: Burden multiplier at the top of Sheet 2 equals $B$3 on Sheet 1.**
+
+```python
+sheet2_mid_burden = wb["Scenario Analysis"]["B6"].value  # mid column burden row
+sheet1_mid_burden = wb["IGCE Summary"]["B3"].value
+assert abs(sheet2_mid_burden - sheet1_mid_burden) < 0.001, "Burden multiplier drift between sheets"
+```
+
+Only after all three pass, copy to outputs and call `present_files`.
+
+### Step 8.6: Pre-Delivery Sanity Checklist (walk through before calling present_files)
+
+Run this checklist mentally or in writing before delivering. Any "no" means stop and fix.
+
+- [ ] **Skill triggered and announced.** First line of response acknowledges the LH/T&M skill was loaded. User can see which skill is running.
+- [ ] **Cell references match the DOWNSTREAM CELL REFERENCES map.** No drift between prose and layout.
+- [ ] **Per-FTE sanity gate passed.** First LCAT base-year cost / FTE is between $100K and $1M.
+- [ ] **Sheet 1 total == Sheet 2 mid total** within $0.01.
+- [ ] **Aging factor is a cell-referenced formula**, not a hardcoded multiplier.
+- [ ] **Escalation not double-counted.** Option years apply escalation from base; base year does NOT also apply escalation.
+- [ ] **Placeholder rows use numeric 0**, not text "TBD". SUM formulas intact.
+- [ ] **Per diem FY matches contract start** (or fallback documented if target FY not yet published).
+- [ ] **Travel math respects FTR 301-11.101** 75% first/last day M&IE rule; 0-night day trips use single-partial-day M&IE.
+- [ ] **CALC+ divergence >15% items are justified** in Methodology (corpus mismatch, thin pool, etc.) or the SOC was re-picked.
+- [ ] **Raw Data sheet includes rejected SOC alternatives** when a re-pick happened.
+- [ ] **FAR citations present**: 16.601 (always), 16.601(b)(2) (T&M materials), 16.601(c)(2) (LCAT ceiling hours), 16.601(c)(3) (T&M surveillance), 31.205-46 (if travel).
+- [ ] **Burden multiplier range matches contract vehicle** per the Contract Vehicle Usage Rule table.
+- [ ] **Staffing handoff used as-is.** FTE counts and productive hours match the user-provided values.
+- [ ] **Contract type labeled clearly** on Cover / Sheet 1 (LH vs T&M).
+
+Only after all green, proceed to Step 9.
 
 ### Step 9: Present the File
 
