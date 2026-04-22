@@ -143,7 +143,7 @@ If ANY of those tokens appear, the ENTIRE first response must be the refusal tem
 
 ## Information to Collect
 
-Ask for everything in a single pass. Provide defaults where noted.
+Ask for everything in a single pass. Provide defaults where noted. If any Required Input is ambiguous or missing for Workflow A (e.g., labor count without discipline, location without metro, fee type not specified), use `AskUserQuestion` to collect before pulling data. Do not guess.
 
 ### Required Inputs
 
@@ -162,7 +162,7 @@ Ask for everything in a single pass. Provide defaults where noted.
 |-------|---------|-------|
 | Burden multiplier | 2.0x | Mid scenario; low (1.8x) and high (2.2x) also produced |
 | Escalation rate | 2.5%/yr | Applied to labor, travel, and materials |
-| Shift coverage | Single shift | Specify 24x7 if needed; Step 0.5 computes FTE |
+| Shift coverage | Business hours (8x5) default | Specify 24x7 / 16x7 / 12x5 if applicable; Step 0.5 computes FTE |
 | Travel destinations | None | City/state per destination |
 | Travel frequency | None | Trips/year per destination |
 | Travel duration | None | Nights per trip (0 = day trip) |
@@ -242,11 +242,11 @@ Security Operations     | InfoSec Analyst     | 15-1212  | 1-2       | Continuou
 Project Oversight       | Project Manager     | 13-1082  | 1         | Single contract
 ```
 
-7. **User validation gate (CRITICAL) - two stages, not one.** Stage A/B gate applies to Workflow A+ (SOW-driven builds). Skip for Workflow A-LH/A-TM (FFP, CR) when the user provides structured inputs (LCATs, FTE, location, PoP) — those don't need decomposition validation, go straight to build parameters if anything is missing. Do not conflate "confirm the decomposition" with "pick build parameters." Run them separately:
+7. **User validation gate (CRITICAL) - two stages, not one.** Skip Stage A/B gate when user provides structured inputs: LCATs with discipline, location with metro, FTE counts, and PoP all specified. If any of those four are ambiguous or missing, run the gate. Do not conflate "confirm the decomposition" with "pick build parameters." Run them separately:
 
    **Stage A - Decomposition validation.** After presenting the decomposition table, ask the user to confirm or amend it. Use `AskUserQuestion` with options like "Decomposition looks right, proceed" / "Modify LCAT X" / "Add LCAT Y" / "Adjust FTE estimates." Response MUST END after this question. Wait for explicit confirmation before continuing.
 
-   **Stage B - Build parameters.** Only after the decomposition is confirmed, ask the remaining parameter questions in a separate `AskUserQuestion` call: LH vs. T&M ("Does this requirement include materials the contractor will procure (software licenses, cloud hosting, hardware)? If yes, I'll build a T&M IGCE with materials. If labor only, I'll build LH."), vehicle preset, metro confirmation, contract start, shift coverage density if 24x7. Response MUST END after this question.
+   **Stage B - Build parameters.** Only after the decomposition is confirmed, ask the remaining parameter questions in a separate `AskUserQuestion` call: LH vs. T&M ("Does this requirement include materials the contractor will procure (software licenses, cloud hosting, hardware)? If yes, I'll build a T&M IGCE with materials. If labor only, I'll build LH."), vehicle preset, metro confirmation, contract start, NAICS/PSC, shift coverage density if 24x7. Response MUST END after this question.
 
    DO NOT self-approve either stage. DO NOT skip Stage A to go straight to parameters. Proceeding to Step 1+ before Stage B is also answered is a skill violation. The user must affirmatively validate BOTH the decomposition and the parameters before build work begins.
 
@@ -351,7 +351,7 @@ OEU  M  +  0047900 +  000000  +  151212 +  13  = OEUM004790000000015121213
 - SOC must be exactly 6 chars (no trailing zeros: 151212 not 15121200)
 - Industry 000000 for cross-industry
 
-Use metro-level prefix (OEUM) when available. Fall back to state (OEUS), then national (OEUN). Present the full wage distribution.
+Use metro-level prefix (OEUM) when available. Fall back to state (OEUS), then national (OEUN). Present the full wage distribution. If the target metro is not in `list_common_metros`, resolve the MSA code via https://www.bls.gov/oes/current/msa_def.htm and pass the 7-char code directly to `get_wage_data`. Do not fall back to state-level wages without first checking the MSA directory.
 
 **Seniority modeling via percentiles:** When an LCAT is explicitly Junior / Mid / Senior, map to wage percentiles rather than pulling three separate SOCs:
 - Junior → P25 (datatype 12)
@@ -364,7 +364,7 @@ Pull all 5 percentiles (P10/P25/P50/P75/P90) for any multi-level LCAT. Cite whic
 - **MSA renumbering (2024 OMB Bulletin 23-01).** If a metro query returns NO_DATA across EVERY SOC (not just one), the metro was renumbered, not suppressed. Cleveland moved from 17460 to 17410. Dayton may also have moved. Verify against the current BLS MSA list: `https://www.bls.gov/oes/current/oessrci.htm`. Do NOT fall back to state assuming occupation suppression until you've checked the code.
 - **Wrong trailing zeros.** 151212 is the 6-char SOC. 15121200 is a Standard SOC 8-digit format that will fail the 25-char series ID assertion AFTER several queries have already constructed.
 
-If BLS returns "-" with footnote code 5, the wage exceeds the $239,200 cap. Use the cap as a lower bound and flag in the narrative.
+If BLS returns "-" with footnote code 5, the wage exceeds the $239,200 cap. Use the cap as a lower bound and flag in the narrative. If the chosen percentile lands within 10% of the cap (≥ $215,280 annual / ≥ $103.50 hourly), note in Methodology that the local market may exceed the stated value and flag for CO review.
 
 ### Step 2B: Age BLS Wages to Contract Start Date
 
@@ -405,7 +405,7 @@ Note: 2,080 converts annual to hourly. Productive hours (1,880) are used separat
 
 **IGCE use case for CALC+:** directional sanity-layer validation of BLS-burdened rates against GSA MAS awarded ceiling pool. `keyword=` is acceptable here per the CALC+ skill (sanity layer, not formal rate statistics). Full endpoint base URL, response envelope shape, and corpus skew guidance all live in the CALC+ skill.
 
-**Fetch aggregations only:** `page_size=0` (aggregations compute over the full result set regardless of page_size). When you only need pool stats (count, min/max, percentiles) for validation, call `mcp__gsa-calc__igce_benchmark` instead of `keyword_search` — igce_benchmark returns trimmed stats without the 50KB+ labor_category/current_price aggregation buckets that blow up response size.
+**Default for Workflow A rate validation:** use `mcp__gsa-calc__igce_benchmark`. Call `keyword_search` only when you need the example-rate or labor-category buckets. igce_benchmark returns trimmed stats (count, min/max/mean, P10-P90) without the 50KB+ labor_category/current_price aggregation buckets that blow up response size. If using `keyword_search`, `page_size=0` computes aggregations over the full result set.
 
 Match the vendor's tier in the keyword, not the aggregate title. For 'Mid Software Developer' query `Software Developer II` not `Software Developer` — the aggregate pool mixes interns through Senior levels and can falsely flag rates as +70% divergent when the tier-matched pool is +11%.
 
@@ -442,7 +442,7 @@ LH/T&M burdened rates are a DIRECT comparison to CALC+ ceiling rates (both repre
 |------------|---------------|--------|
 | 0 to ±5% | Expected range | Accept without explanation |
 | ±5 to ±15% | Cite range | Document in narrative, show distribution |
-| > ±15% | Needs justification | Flag in Status column |
+| > ±15% | Position outside ±15% band; document stacked factors in Methodology | Flag in Status column |
 
 Divergence formula: `((bls_burdened - calc_median) / calc_median) * 100`. Divergence is a data point requiring explanation, not an error.
 
@@ -450,7 +450,7 @@ Divergence formula: `((bls_burdened - calc_median) / calc_median) * 100`. Diverg
 
 **Use the GSA Per Diem Rates API skill.** Query monthly lodging rates and M&IE for each destination.
 
-**DoD installation → GSA per diem city crosswalk.** GSA keys per diem by civilian locality, not by military installation. Looking up "Fort Meade" or "Pentagon" directly returns empty. Translate the installation to its GSA locality BEFORE calling the MCP:
+**Installation → GSA locality crosswalk.** GSA keys per diem by civilian locality, not by military installation or research lab. Looking up "Fort Meade" or "Pentagon" directly returns empty. Translate the installation to its GSA locality BEFORE calling the MCP:
 
 | DoD installation | GSA locality | Metro |
 |---|---|---|
@@ -469,6 +469,12 @@ Divergence formula: `((bls_burdened - calc_median) / calc_median) * 100`. Diverg
 | Offutt AFB, NE | Omaha / Bellevue, NE | Omaha |
 | Cape Canaveral / Patrick SFB, FL | Cocoa Beach / Cape Canaveral, FL | Palm Bay-Melbourne |
 | JB Lewis-McChord, WA | Tacoma / Pierce County, WA | Seattle-Tacoma |
+| Oak Ridge National Lab / Y-12, TN | Knoxville, TN | Knoxville |
+| Los Alamos National Lab, NM | Santa Fe / Los Alamos County, NM | Santa Fe |
+| Hanford / PNNL, WA | Richland, WA | Kennewick-Richland |
+| Sandia National Labs, NM | Albuquerque, NM | Albuquerque |
+| Lawrence Livermore National Lab, CA | Livermore / Oakland, CA | Oakland-Fremont |
+| Idaho National Lab, ID | Idaho Falls, ID | Idaho Falls |
 
 If the installation is not on this list, query `mcp__gsa-perdiem__lookup_city_perdiem` with the nearest civilian city and cross-check the result's `county` field.
 
@@ -508,7 +514,7 @@ Use max monthly lodging rate as conservative ceiling if specific months not prov
 
 If the contract PoP start is within 6 months of the next federal fiscal year, query both FYs; if the target FY is not yet published (FY{N+1} publishes mid-August {N}), use current FY as conservative baseline and note in methodology: 'refresh on FY{N+1} publication.'
 
-**No travel case:** If user confirms zero travel, do NOT build Sheet 4 with placeholder zeros that break SUM formulas. Use a minimal sheet with text "Travel Not Applicable" and no cell references. Sheet 1 Travel row = 0 literal.
+**No travel case:** When no travel, include the sheet with a single 'Travel Not Applicable' text block. Do not skip the sheet — Sheet 1 Travel row still needs a cell reference target. Sheet 1 Travel row = 0 literal.
 
 ### Step 5B: Materials Estimation (T&M Only)
 
@@ -650,12 +656,12 @@ Row 4+: one row per category
   Status =
     IF(ABS(Divergence) <= 0.05, "Expected range",
     IF(ABS(Divergence) <= 0.15, "Cite range",
-    "Needs justification"))
+    "Position outside +-15% band; document stacked factors in Methodology"))
 ```
 
 Dual-pool columns when title-match N<10: add "Pool A (Title)" and "Pool B (Experience)" median columns, cite N for each.
 
-**Sheet 4: Travel Detail.** Formula-driven per destination (skip this sheet if no travel, use text "Travel Not Applicable" only).
+**Sheet 4: Travel Detail.** Formula-driven per destination. When no travel, include the sheet with a single 'Travel Not Applicable' text block. Do not skip the sheet; Sheet 1 Travel row still needs a cell reference target.
 
 **Multi-destination parameterization.** For M destinations, block N starts at row `1 + (N-1) * 17` with a 16-row content layout and 1-row separator. In-block row indices shift by `(N-1) * 17`. Do NOT hard-code one city: if the user provides "2 trips/yr to Huntsville + 4 trips/yr to San Diego," build two blocks with distinct labeled headers ("Travel Cost Detail: Huntsville, AL" and "Travel Cost Detail: San Diego, CA") and have Sheet 1 Travel rows SUM across destinations:
 
@@ -682,7 +688,7 @@ Row 13: A="Travelers"            B=[count]                       (blue)
 Row 14: A="Annual Travel Cost"   B==B11*B12*B13                  (formula, bold)
 ```
 
-**Sheet 5: Methodology.** Narrative for the contract file.
+**Sheet 5: Methodology.** Narrative for the contract file. Target length: 8-12 sections, 2-4 sentences each, readable in 3 minutes. Longer than 14 sections usually means restating data that already lives in Sheet 1-4.
 
 **Important: do NOT merge section-header cells if you also write to column B on the same row.** openpyxl raises "'MergedCell' object attribute 'value' is read-only" when a merge covers A:C and then a write targets B of the merged range. Two-column label/value layout: put section headers on their own rows (no merge), then use adjacent A/B rows for label/value pairs.
 
@@ -790,6 +796,7 @@ Verify the workbook grand total lands within 1% of `expected`. If not, aging-fac
 - **claude.ai web chat:** copy to `/mnt/user-data/outputs/<name>.xlsx` and call `present_files([...])`.
 - **Claude Code CLI:** write to `$PWD` or user-supplied path. Print the absolute path. On macOS also run `open <path>`; on Linux `xdg-open <path>`; on Windows `start "" <path>`. Do NOT try `/mnt/user-data/outputs/` — does not exist outside claude.ai.
 - **macOS Claude Desktop with Numbers:** write path, run `open <path>`. Numbers auto-recalculates on open.
+- **macOS Claude Code CLI with Excel or Numbers installed:** write to `$PWD`, then run `open <path>`. The system default handler triggers recalc on open; no Python-side expected-total check is needed.
 
 Do NOT skip delivery. A workbook in the sandbox that isn't surfaced looks like a silent failure.
 

@@ -459,6 +459,10 @@ SKILL.md: 897 → 854 (-43 lines).
 
 All Wave 6 patches were inherited from LH/T&M testing, not directly re-tested on FFP. FFP regression testing against S1-S6 on the post-Wave-6 skill is queued.
 
+## Wave 7 (inherited from CR Wave 1 lazy-prompt testing)
+
+**Wave 7** (Cross-skill patches inherited from CR Wave 1 lazy-prompt testing): CR Wave 1 surfaced 22 findings across three lazy-prompt scenarios. 14 were patched, 8 dropped as too scenario-specific. Universal patches ported to FFP: Installation to GSA locality crosswalk expanded with 6 DOE labs (Oak Ridge, LANL, Hanford, Sandia, LLNL, INL), BLS MSA URL fallback, Workflow A ambiguous-input rule, Step 9 env fork with macOS Excel/Numbers branch, BLS wage-cap 10% proximity rule, shift coverage upfront in Information to Collect, Methodology depth guidance. Editorial fixes: Rate Validation status text neutralized, Sheet 5 travel skip-or-include resolved, Stage A/B skip clarified, CALC+ igce_benchmark promoted to default, NAICS/PSC proactive ask. **Status:** patches inherited from CR testing, not re-tested on FFP directly. FFP remains validated through Wave 5 end-to-end scenarios plus Wave 6 gate hardening.
+
 ## Independent grading methodology
 
 The Wave 1 and Wave 2 testing records were produced under a consistent methodology:

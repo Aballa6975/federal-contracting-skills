@@ -4,45 +4,144 @@
 
 ## The bottom line
 
-This testing record documents inherited patches from FFP Wave 5 and LH/T&M Wave 2 testing. **No CR-specific scenarios have been run directly against this skill yet.** CR regression testing is queued for a future wave.
+Two waves of testing for the Cost-Reimbursement skill across April 2026: Wave 1 inherited the full patch set from FFP Wave 5 and LH/T&M Wave 2 without direct CR scenarios. Wave 2 ran three lazy-prompt scenarios on Claude Opus 4.7 covering all three fee types (CPFF biomedical research, CPAF managed services, CPIF Oak Ridge engineering). Wave 2 surfaced 22 findings; 14 were patched, 8 dropped as too scenario-specific. The skill now produces auditable CPFF, CPAF, and CPIF workbooks end-to-end with cost pool buildup, fee structure analysis, and ai-boundaries-compliant narrative.
 
-The CR skill orchestrates the same three MCP servers (bls-oews, gsa-calc, gsa-perdiem) as FFP and LH/T&M, produces structurally similar workbooks (cost pool buildup with fee analysis instead of wrap rate or burden multiplier), and inherits the same patch set validated on those siblings.
+- **Wave 1** (inherited): six universal patches from FFP Wave 5 and LH/T&M Wave 2 applied without direct CR scenarios. ai-boundaries v2 gate, pre-flight MCP check, Step 0 two-stage validation gate (with fee type as a Stage B parameter), DoD installation to GSA per diem crosswalk, multi-destination travel sheet, CLI recalc fallback, CALC+ query optimizations, FY rollover guidance.
+- **Wave 2** (lazy-prompt validated, Claude Code CLI, Opus 4.7): three scenarios run with deliberately sparse user inputs to exercise the skill's decomposition, parameter-prompting, and fee-type-selection paths. 22 findings surfaced across the three scenarios; 14 universal and CR-specific patches shipped; 8 dropped as edge-case.
 
-## Inherited patches (Wave 1, not directly tested on CR)
+## Scenarios tested and how reliably they work
 
-All universal patches derived from FFP Wave 5 and LH/T&M Wave 2 testing apply to CR:
+| Scenario | Fee type | Lazy prompt | Result |
+|---|---|---|---|
+| CPFF biomedical research at NIH Bethesda (PhD biomedical scientists, no travel, base + 3 OYs) | CPFF | "price an NIH research contract, 4 PhDs, base plus options" | Reliable after Wave 2 patches. Medical Scientist SOC (19-1042) added. Cost pool buildup at research-lab defaults. 85% assumed earned gated. |
+| CPAF managed services at civilian agency (10-person team, CALC+ rate validation, base + 2 OYs) | CPAF | "build a CR IGCE for a managed services contract with award fee" | Reliable after Wave 2 patches. 3-scenario fee view (base only, target with 85% earned, ceiling with full pool) shown in Summary. |
+| CPIF Oak Ridge DOE engineering (asymmetric share ratio, bound-crossing variance, 6 LCATs, base + 4 OYs) | CPIF | "CPIF IGCE at Oak Ridge, 80/20 over and 50/50 under, complex work" | Reliable after Wave 2 patches. Asymmetric share ratios split into contractor_share_over and contractor_share_under. ±25% bound-crossing variance documented. |
 
-- **ai-boundaries positioning (v2 gate):** Workflow B Step 0 token-scan + verbatim refusal template. Skill does not originate "fair and reasonable" determinations, price reasonableness memos, or negotiation recommendations. Two options at gate: Option A (positioning data only) or Option B (memo template fill with CO's verbatim rationale + determination).
-- **Pre-flight MCP dependency check:** validates bls-oews, gsa-calc, gsa-perdiem tools and API keys before any workflow runs.
-- **Step 0 two-stage validation gate:** Stage A (decomposition) + Stage B (build parameters including fee type: CPFF/CPAF/CPIF) as separate AskUserQuestion calls. Skip for Workflow A with structured inputs.
-- **DoD installation to GSA per diem crosswalk:** 15-row table mapping military installations to GSA civilian localities. NSA Bethesda routes to DC composite (not Montgomery County).
-- **Multi-destination travel sheet:** Sheet 5 parameterized for M destinations, Sheet 1 Travel SUMs across blocks.
-- **CLI recalc fallback:** Python expected-total check when LibreOffice recalc.py unavailable.
-- **Step 9 environment fork:** delivery path varies by environment (claude.ai / Claude Code CLI / macOS Desktop with Numbers).
-- **CALC+ query optimizations:** keyword_search to igce_benchmark for stats-only; tier-matched keywords (not aggregate pool) to avoid false divergence flags.
-- **FY rollover guidance:** if contract PoP start within 6 months of next FY, query both and document refresh on publication.
-- **Raw Data sheet granularity:** summary tables with query parameters, not raw JSON dumps.
+## Manual-verification checklist
 
-## What has NOT been tested on CR
+Scan every CR IGCE output for these before using in a contract file:
 
-- SOW/PWS decomposition into CR-specific labor mix
-- Fee structure selection workflow (CPFF vs CPAF vs CPIF)
-- CPAF award fee pool modeling with assumed-earned percentage
-- CPIF share ratio mechanics and 3x3 matrix (cost scenarios x fee outcomes)
-- Statutory fee cap enforcement (15% R&D, 10% non-R&D practical ceiling)
-- BAA-driven builds under FAR 35.016
-- Cost pool rate scenario analysis (fringe/overhead/G&A at low/mid/high)
-- 24x7 coverage with CR fee math
-- Multi-location CR with fee calculated on each location's cost
+**1. Fee type declared in Summary row 5.** CPFF, CPAF, or CPIF label is mandatory. Fee math downstream cascades from this cell.
 
-## Regression plan (queued)
+**2. Cost pool buildup is layered, not collapsed.** Direct Labor → Fringe → Labor+Fringe → Overhead → Subtotal → G&A → Total Cost → Fee → Total Price. Methodology must explain each layer.
 
-A Wave 2 CR testing round should cover at minimum:
-- One CPFF BAA-driven build with R&D scope
-- One CPAF build with 10-person team and award fee pool
-- One CPIF build with share ratio and 3x3 matrix
-- Rate validation (Workflow B) with ai-boundaries gate exercised
+**3. Statutory fee caps enforced.** R&D fee cannot exceed 15% of estimated cost per 10 USC 3322(a). Non-R&D practical ceiling is 10%. If fee exceeds these, flag and reduce.
+
+**4. CPIF share ratios asymmetric by default.** Most real CPIF agreements have different over and under share ratios (e.g., 80/20 over, 50/50 under). The assumption block exposes both as separate variables.
+
+**5. CPIF bound-crossing documented.** When the overrun variance is wide enough that fee hits the min bound, or underrun variance hits the max bound, Methodology must explicitly say "share ratio stops applying at this cost level."
+
+**6. CPAF shows 3 fee scenarios, not 1.** Summary must show: (a) base fee only (worst earned), (b) base + 85% pool (target), (c) base + full pool (ceiling). Single-point assumption hides range from CO.
+
+**7. ai-boundaries gate held.** First response to "is this CR rate reasonable" must emit the refusal template, not a determination.
+
+## What the skill does not do
+
+- **It does not produce FFP or LH/T&M estimates.** Use IGCE Builder FFP or IGCE Builder LH/T&M.
+- **It does not substitute for a contracting officer's price reasonableness determination.** IGCE is an estimate; the CO makes the determination per FAR 15.404.
+- **It does not enforce agency-specific fee policies.** Some agencies cap CR fee below 10 USC statutory limits; skill flags the statutory cap only.
+- **It does not produce a formal DCAA-compliant cost proposal review.** IGCE is the government-side estimate; DCAA audits the contractor's proposed rates separately.
+- **It has not been tested on:** BAA cooperative agreements under FAR 35.016 with non-standard fee structures, Termination for Convenience cost estimation, CR-to-FFP conversion modeling, or OCONUS CR builds.
 
 ---
 
-*Testing record prepared April 2026 by James Jenrette / 1102tools. Inherited-only status documented honestly. MIT licensed. Source: github.com/1102tools/federal-contracting-skills.*
+# Part 2: For Developers and Technical Reviewers
+
+## Testing methodology
+
+### Scenarios
+
+Three scenarios designed to exercise distinct CR mechanics across fee types:
+
+- **S1 (CPFF, biomedical research):** NIH Bethesda, 4 PhD medical scientists, no travel, base + 3 OYs. Lazy prompt: "price an NIH research contract, 4 PhDs, base plus options." Exercises Medical Scientist SOC mapping (19-1042 vs 19-1099 Life Scientists All Other), NIH-domain cost pool defaults, CPFF 8% fixed fee, statutory 15% R&D cap awareness, no-travel Sheet 5 handling.
+- **S2 (CPAF, managed services):** Civilian agency, 10-person team, 4 travel destinations, CALC+ rate validation, base + 2 OYs. Lazy prompt: "build a CR IGCE for a managed services contract with award fee." Exercises CPAF 3-scenario fee view (base/target/ceiling), assumed-earned gating, civilian-agency cost pool defaults, multi-destination Sheet 5 parameterization.
+- **S3 (CPIF, Oak Ridge DOE engineering):** 6 LCATs (Mechanical, Electrical, Chemical, Nuclear Engineers, PM, Admin), asymmetric 80/20 over and 50/50 under share ratios, ±10% baseline and ±25% bound-crossing variance, base + 4 OYs. Lazy prompt: "CPIF IGCE at Oak Ridge, 80/20 over and 50/50 under, complex work." Exercises CPIF asymmetric share ratio support, bound-crossing documentation, DOE M&O cost pool defaults, DOE lab per diem crosswalk (Oak Ridge → Knoxville TN).
+
+Each scenario had a 14-point binary assertion matrix covering skill activation, fee type selection, cost pool layering, rate validation, FAR citation completeness, workbook structural integrity, methodology completeness, and lazy-prompt recovery (did the skill prompt for missing inputs rather than guess).
+
+### Environment
+
+- Claude Code CLI, fresh conversation per scenario, Opus 4.7
+- Local `~/.claude/skills/igce-builder-cr/SKILL.md` post-Wave 1 inheritance
+- All three scenarios completed in a single worker pass without "continue" (post-inheritance skill was slim enough)
+
+### Grading
+
+Grader read worker's final response plus produced xlsx. Workers not coached. Assertions graded binary pass/fail. Worker self-critiques incorporated when corroborated by direct observation.
+
+## Wave 1 (inherited, not directly tested on CR)
+
+All universal patches derived from FFP Wave 5 and LH/T&M Wave 2 testing applied to CR at Wave 1:
+
+- **ai-boundaries positioning (v2 gate):** Workflow B Step 0 token-scan + verbatim refusal template. Skill does not originate "fair and reasonable" determinations, price reasonableness memos, or negotiation recommendations.
+- **Pre-flight MCP dependency check:** validates bls-oews, gsa-calc, gsa-perdiem tools and API keys before any workflow runs.
+- **Step 0 two-stage validation gate:** Stage A (decomposition) + Stage B (build parameters including fee type CPFF/CPAF/CPIF) as separate AskUserQuestion calls. Skip for Workflow A with structured inputs.
+- **DoD installation to GSA per diem crosswalk:** 15-row table mapping military installations to GSA civilian localities.
+- **Multi-destination travel sheet:** Sheet 5 parameterized for M destinations, Sheet 1 Travel SUMs across blocks.
+- **CLI recalc fallback:** Python expected-total check when LibreOffice recalc.py unavailable.
+- **Step 9 environment fork:** delivery path varies by environment (claude.ai / Claude Code CLI / macOS Desktop with Numbers).
+- **CALC+ query optimizations:** keyword_search to igce_benchmark for stats-only; tier-matched keywords to avoid false divergence flags.
+- **FY rollover guidance:** if contract PoP start within 6 months of next FY, query both and document refresh on publication.
+- **Raw Data sheet granularity:** summary tables with query parameters, not raw JSON dumps.
+
+## Wave 2 results (lazy-prompt validated)
+
+| Scenario | Score | Fee type |
+|---|---|---|
+| S1 CPFF biomedical research | 14/14 | CPFF |
+| S2 CPAF managed services | 14/14 | CPAF |
+| S3 CPIF Oak Ridge engineering | 14/14 | CPIF |
+| **Total** | **42/42 (100%)** | — |
+
+## Wave 2 findings: 22 surfaced, 14 patched
+
+### Universal patches (horizontal, ported to FFP and LH/T&M)
+
+1. **Installation to GSA locality crosswalk expanded with 6 DOE labs.** Oak Ridge/Y-12 to Knoxville, LANL to Santa Fe, Hanford/PNNL to Richland, Sandia to Albuquerque, LLNL to Oakland-Fremont, INL to Idaho Falls. Prevents empty per diem lookups for DOE R&D scope.
+2. **BLS MSA URL fallback for metros outside list_common_metros.** Worker hit this in S1 when the NIH Bethesda metro wasn't in the common-metros list. Skill now directs worker to resolve MSA code via https://www.bls.gov/oes/current/msa_def.htm rather than silently falling back to state wages.
+3. **Workflow A ambiguous-input rule.** Lazy prompts like "4 PhDs" without discipline triggered worker guessing. Skill now requires AskUserQuestion for ambiguous required inputs before pulling data.
+4. **Step 9 env fork with macOS Excel/Numbers branch.** Claude Code CLI with Excel or Numbers installed can skip the Python-side expected-total check; open triggers recalc via system handler.
+5. **BLS wage-cap 10% proximity rule.** When chosen percentile lands within 10% of the $239,200 cap (at or above $215,280 annual or $103.50 hourly), Methodology must flag for CO review.
+6. **Shift coverage upfront in Information to Collect.** Added as Optional Input row so worker asks about 24x7/16x7/12x5 before Step 0.5 is needed.
+7. **Methodology depth guidance.** Target 8-12 sections, 2-4 sentences each, readable in 3 minutes. Longer than 14 sections usually means restating Sheet 1-4 data.
+
+### CR-specific patches
+
+8. **SOC 19-1042 Medical Scientist added to Research/Science table.** S1 worker had to improvise between 19-1099 (Life Scientists All Other) and no-match for PhD biomedical. Medical Scientists, Except Epidemiologists is the correct SOC for NIH/pharma PhD biomedical researchers.
+9. **Block layout parameterized by fee type.** Sheet 2 block size varies: CPFF = 19 rows, CPAF = 21 rows (adds Base Fee Rate + Award Pool Rate + Assumed Earned %), CPIF = 23 rows (adds Target Fee Rate + Share Ratio Over + Share Ratio Under + Min Fee + Max Fee). Assumption block row ranges: CPFF rows 2-13, CPAF rows 2-15, CPIF rows 2-17.
+10. **Asymmetric CPIF share ratio.** Single share_ratio variable split into contractor_share_over and contractor_share_under. Real CPIF agreements frequently asymmetric (80/20 over, 50/50 under); exposing both directions separately lets the CO see each leg independently.
+11. **CPIF bound-crossing variance.** Baseline ±10% variance supplemented with ±25% or wider variance that crosses the min/max fee bounds. Methodology now documents when share ratio stops applying.
+12. **CPAF 3-scenario fee view.** Summary shows (a) base only 3% worst, (b) base + 85% pool 8.95% target, (c) base + full pool 10% ceiling. Prevents single-point 85%-earned estimate hiding the range.
+
+### Editorial fixes
+
+13. **Rate Validation status text neutralized.** "Needs explicit justification" replaced with "Position outside ±25% band; document stacked factors in Methodology" (preserving the ±25% CR threshold).
+14. **Sheet 5 travel skip-or-include contradiction resolved.** Prior copy said "skip if no travel" in one place and "include stub" in another. Now consistent: always include sheet, show 'Travel Not Applicable' text when no travel.
+15. **Stage A/B skip condition sharpened.** Skip when user provides all four: LCATs with discipline, location with metro, FTE counts, PoP. If any ambiguous or missing, run the gate.
+16. **igce_benchmark promoted to default.** `mcp__gsa-calc__igce_benchmark` is now the default tool for Workflow A rate validation; keyword_search reserved for example-rate or labor-category bucket needs.
+17. **NAICS/PSC proactive ask.** Step 0 Stage B parameter question list now explicitly includes NAICS/PSC alongside fee type, metro, contract start.
+
+### Dropped (too scenario-specific, not worth horizontal ship)
+
+- BAA cooperative-agreement fee rules (agency-specific, not generalizable)
+- OCONUS cost pool adjustments (single OCONUS scenario insufficient data)
+- Subcontractor fee-on-fee prohibition edge case (vendor-side rule, not IGCE)
+- Termination for Convenience cost estimation (separate activity)
+- DCAA forward-pricing rate proposal templates (not IGCE scope)
+- Modular budget patterns from NIH R01 (belongs to Grants Budget Builder)
+- Limitation on Subcontracting for small business set-asides (pre-award check, not IGCE)
+- Award Fee Evaluation Factor weighting (performance monitoring, not IGCE)
+
+## What has NOT been tested on CR
+
+- BAA cooperative agreements under FAR 35.016 with non-standard fee structures
+- Termination for Convenience cost estimation
+- CR-to-FFP conversion modeling (pricing legacy cost-plus scopes as FFP)
+- OCONUS CR builds (per diem covers CONUS only)
+- 24x7 shift coverage with CR fee math (Step 0.5 untouched since inheritance)
+- Custom cost pool rates supplied by CO (skill has rule; no direct test)
+- Sonnet 4.6 parity on Wave 2 patches (all runs Opus 4.7)
+
+---
+
+*Testing record prepared April 2026 by James Jenrette / 1102tools. Two waves documented: Wave 1 inherited, Wave 2 lazy-prompt validated. MIT licensed. Source: github.com/1102tools/federal-contracting-skills.*

@@ -147,7 +147,7 @@ If ANY of those tokens appear, the ENTIRE first response must be the refusal tem
 
 ## Information to Collect
 
-Batch clarifying questions rather than ask iteratively. If key inputs are missing, ask all in one message before building. Provide defaults where noted.
+Batch clarifying questions rather than ask iteratively. If key inputs are missing, ask all in one message before building. Provide defaults where noted. If any Required Input is ambiguous or missing for Workflow A (e.g., labor count without discipline, location without metro, fee type not specified), use `AskUserQuestion` to collect before pulling data. Do not guess.
 
 ### Required Inputs
 
@@ -180,6 +180,7 @@ Batch clarifying questions rather than ask iteratively. If key inputs are missin
 | PSC code | None | Include in output if provided |
 | Partial start | Full year (12 months) | Specify months if base year is partial |
 | FFP pricing structure | By period | "By period" or "By deliverable/CLIN" |
+| Shift coverage | Business hours (8x5) default | Specify 24x7 / 16x7 / 12x5 if applicable; Step 0.5 computes FTE |
 
 ### Wrap Rate Component Guidance
 
@@ -266,11 +267,11 @@ Security Operations     | InfoSec Analyst     | 15-1212  | 1-2       | Continuou
 Project Oversight       | Project Manager     | 13-1082  | 1         | Single contract
 ```
 
-6. **User validation gate (CRITICAL) - two stages, not one.** Stage A/B gate applies to Workflow A+ (SOW-driven builds). Skip for Workflow A-LH/A-TM (FFP, CR) when the user provides structured inputs (LCATs, FTE, location, PoP) — those don't need decomposition validation, go straight to build parameters if anything is missing. Do not conflate "confirm the decomposition" with "pick build parameters." Run them separately:
+6. **User validation gate (CRITICAL) - two stages, not one.** Skip Stage A/B gate when user provides structured inputs: LCATs with discipline, location with metro, FTE counts, and PoP all specified. If any of those four are ambiguous or missing, run the gate. Do not conflate "confirm the decomposition" with "pick build parameters." Run them separately:
 
    **Stage A - Decomposition validation.** After presenting the decomposition table, ask the user to confirm or amend it. Use `AskUserQuestion` with options like "Decomposition looks right, proceed" / "Modify LCAT X" / "Add LCAT Y" / "Adjust FTE estimates." Response MUST END after this question. Wait for explicit confirmation before continuing.
 
-   **Stage B - Build parameters.** Only after the decomposition is confirmed, ask the remaining parameter questions (vehicle preset, metro, contract start, hour-allocation method for FFP-by-deliverable, shift coverage density if 24x7). Use a separate `AskUserQuestion` call. Response MUST END after this question.
+   **Stage B - Build parameters.** Only after the decomposition is confirmed, ask the remaining parameter questions (vehicle preset, metro, contract start, NAICS/PSC, hour-allocation method for FFP-by-deliverable, shift coverage density if 24x7). Use a separate `AskUserQuestion` call. Response MUST END after this question.
 
    DO NOT self-approve either stage. DO NOT skip Stage A to go straight to parameters. Proceeding to Step 1+ before Stage B is also answered is a skill violation. The user must affirmatively validate BOTH the decomposition and the parameters before build work begins.
 
@@ -377,7 +378,7 @@ When mapping is ambiguous, query multiple SOC codes and present the range.
 
 Call `mcp__bls-oews__get_wage_data(occ_code, scope, area_code, datatypes)` for each labor category. Pass a 6-char SOC, scope `metro|state|national`, and area_code (5-digit MSA for metro, 2-digit FIPS for state). Request datatypes `["04", "11", "12", "13", "14", "15"]` for mean + P10/P25/P50/P75/P90. Valid datatypes accepted by the MCP are `01, 03, 04, 08, 11, 12, 13, 14, 15` only; do NOT pass `02` or `05` (the MCP rejects them).
 
-The MCP builds the 25-char series ID, handles footnote code 5 (cap) vs. code 8 (suppression), and exposes the current MSA list via `list_common_metros` with OMB Bulletin 23-01 renumbering notes. You do not need to hedge against Cleveland 17410 or Dayton 19430 yourself.
+The MCP builds the 25-char series ID, handles footnote code 5 (cap) vs. code 8 (suppression), and exposes the current MSA list via `list_common_metros` with OMB Bulletin 23-01 renumbering notes. You do not need to hedge against Cleveland 17410 or Dayton 19430 yourself. If the target metro is not in `list_common_metros`, resolve the MSA code via https://www.bls.gov/oes/current/msa_def.htm and pass the 7-char code directly to `get_wage_data`. Do not fall back to state-level wages without first checking the MSA directory.
 
 **Geography fallback (caller's job):** metro first; if the MCP returns "series does not exist" on every datatype, try state; fall back to national. Recommend the median as the default basis and present the full distribution.
 
@@ -396,7 +397,7 @@ The MCP builds the 25-char series ID, handles footnote code 5 (cap) vs. code 8 (
 
 Document this in Methodology as a convention, not a BLS standard.
 
-**Wage cap ($239,200 annual / $115.00 hourly).** When the MCP flags a value as capped, use the cap as a lower bound and flag in the narrative.
+**Wage cap ($239,200 annual / $115.00 hourly).** When the MCP flags a value as capped, use the cap as a lower bound and flag in the narrative. If the chosen percentile lands within 10% of the cap (≥ $215,280 annual / ≥ $103.50 hourly), note in Methodology that the local market may exceed the stated value and flag for CO review.
 
 **Cap decision tree when P75 ALSO caps.** In single-employer-dominated metros (ORNL/Y-12 Knoxville Nuclear, certain LANL/INL physicists), P90 and sometimes P75 both cap. When P75 is capped:
 1. Use BLS Mean (datatype 04) as the senior-tier anchor. Document as "P75 capped, Mean used as uncapped senior anchor."
@@ -471,7 +472,7 @@ Follow a discovery-first pattern. The MCP returns clean aggregation stats; your 
 1. **Discover buckets.** Call `mcp__gsa-calc__suggest_contains(field="labor_category", term=<LCAT term>)`. Returns up to 100 buckets with `doc_count` per bucket plus a `likely_truncated` flag. If truncated, narrow the term.
 2. **If the top 2-3 buckets have combined records >=50:** call `mcp__gsa-calc__exact_search(field="labor_category", value=<exact bucket name>)` for each, then aggregate. This avoids the wildcard-match contamination that `keyword_search` produces (it also matches vendor_name and idv_piid).
 3. **If buckets are fragmented** (every bucket under ~30 records, common for niche cleared cyber / specialty engineering): fall back to `mcp__gsa-calc__keyword_search(keyword=<term>)`. Document the contamination caveat in Methodology.
-4. **One-shot alternative:** `mcp__gsa-calc__igce_benchmark(labor_category=<exact>, experience_min=N, education_level=X)` returns count, min/max/mean, std dev, and P10/P25/P50/P75/P90 in one call. Good when the bucket name is already known. When you only need pool stats (count, min/max, percentiles) for validation, call `mcp__gsa-calc__igce_benchmark` instead of `keyword_search` — igce_benchmark returns trimmed stats without the 50KB+ labor_category/current_price aggregation buckets that blow up response size.
+4. **Default for Workflow A rate validation:** use `mcp__gsa-calc__igce_benchmark`. Call `keyword_search` only when you need the example-rate or labor-category buckets. `mcp__gsa-calc__igce_benchmark(labor_category=<exact>, experience_min=N, education_level=X)` returns count, min/max/mean, std dev, and P10/P25/P50/P75/P90 in one call, without the 50KB+ labor_category/current_price aggregation buckets that blow up response size.
 
 The MCP returns canonical stats at the top level of the response dict (count, min_rate, max_rate, avg_rate, p25, p50, p75). No JSON-path archaeology required.
 
@@ -492,7 +493,7 @@ Match the vendor's tier in the keyword, not the aggregate title. For 'Mid Softwa
 - **0-15% above P50:** "Within CALC+ FFP premium range"
 - **15-40% above P50:** "Above P50 by 15-40%; typical FFP risk premium range"
 - **40-70% above P50:** "Above P50 by 40-70%; expected in high-cost metros vs nationwide CALC+. See Methodology for factor decomposition."
-- **>70% above P50:** "Above P50 by >70%; factor decomposition in Methodology. CO review recommended for factors outside BLS/CALC+ data."
+- **>70% above P50:** "Position outside ±70% band; document stacked factors in Methodology."
 - **Below P25:** "Below P25; CO review recommended."
 
 The Sheet 4 Status column labels position the rate; it does NOT say "reasonable" or "outlier." If the user asks the skill to assert reasonableness, refer them to the ai-boundaries principle at the top of this skill.
@@ -512,7 +513,7 @@ Call `mcp__gsa-perdiem__estimate_travel_cost(city, state, num_nights, travel_mon
 
 **Annual travel math:** `annual_travel = grand_total * trips_per_year * travelers`.
 
-**DoD installation → GSA per diem city crosswalk.** GSA keys per diem by civilian locality, not by military installation. Looking up "Fort Meade" or "Pentagon" directly returns empty. Translate the installation to its GSA locality BEFORE calling the MCP:
+**Installation → GSA locality crosswalk.** GSA keys per diem by civilian locality, not by military installation or research lab. Looking up "Fort Meade" or "Pentagon" directly returns empty. Translate the installation to its GSA locality BEFORE calling the MCP:
 
 | DoD installation | GSA locality | Metro |
 |---|---|---|
@@ -531,6 +532,12 @@ Call `mcp__gsa-perdiem__estimate_travel_cost(city, state, num_nights, travel_mon
 | Offutt AFB, NE | Omaha / Bellevue, NE | Omaha |
 | Cape Canaveral / Patrick SFB, FL | Cocoa Beach / Cape Canaveral, FL | Palm Bay-Melbourne |
 | JB Lewis-McChord, WA | Tacoma / Pierce County, WA | Seattle-Tacoma |
+| Oak Ridge National Lab / Y-12, TN | Knoxville, TN | Knoxville |
+| Los Alamos National Lab, NM | Santa Fe / Los Alamos County, NM | Santa Fe |
+| Hanford / PNNL, WA | Richland, WA | Kennewick-Richland |
+| Sandia National Labs, NM | Albuquerque, NM | Albuquerque |
+| Lawrence Livermore National Lab, CA | Livermore / Oakland, CA | Oakland-Fremont |
+| Idaho National Lab, ID | Idaho Falls, ID | Idaho Falls |
 
 If the installation is not on this list, query `mcp__gsa-perdiem__lookup_city_perdiem` with the nearest civilian city and cross-check the result's `county` field.
 
@@ -556,7 +563,7 @@ If the contract PoP start is within 6 months of the next federal fiscal year, qu
 
 Document the choice in Methodology. If the user asks, offer both options via `AskUserQuestion`.
 
-**If no travel is required:** do NOT omit Sheet 5. Produce it with a single "Travel - Not Applicable" block and a note about mod-based travel additions. See Step 8 workbook structure. Also include a Travel row on Sheet 1 Summary with `0` value and "Not Applicable" note (see Step 8 Sheet 1 layout for no-travel handling).
+**When no travel, include the sheet with a single 'Travel Not Applicable' text block. Do not skip the sheet — Sheet 1 Travel row still needs a cell reference target.** See Step 8 workbook structure. Also include a Travel row on Sheet 1 Summary with `0` value and "Not Applicable" note (see Step 8 Sheet 1 layout for no-travel handling).
 
 ### Step 6: Handle Multi-Location Weighting
 
@@ -689,7 +696,7 @@ Cross-sheet references from Sheet 1 point to the FBR row: `='Cost Buildup'!$B$X`
 **Sheet 4: Rate Validation.** BLS burdened rate (mid scenario) vs. CALC+ P25/P50/P75, min/max range, divergence percentage (formula), Status column. Use the calibrated flag thresholds from Step 4:
 
 ```
-=IF(divergence_pct>0.70,"Above P50 +70% - requires specific justification",
+=IF(divergence_pct>0.70,"Position outside +70% band; document in Methodology",
   IF(divergence_pct<-0.25,"Below P25 - review under-pricing",
     IF(divergence_pct>0.40,"Metro geographic premium - document in methodology",
       IF(divergence_pct>0.15,"FFP risk premium - within expected 15-40% band",
@@ -730,7 +737,7 @@ Row 14: A="Annual Travel Cost"    B==B11*B12*B13                  (formula, bold
 
 **Day-trip branch required.** Without the `IF(B7=0,...)` branches on rows 8 and 10, a day trip (Nights=0) produces 150% M&IE instead of the correct 75% single-partial-day per FTR 301-11.101. This is a silent wrong-answer bug at the workbook level; do not skip the IF branches even if all planned trips are overnight.
 
-**Sheet 6: Methodology.** FFP-specific narrative for the contract file.
+**Sheet 6: Methodology.** FFP-specific narrative for the contract file. Target length: 8-12 sections, 2-4 sentences each, readable in 3 minutes. Longer than 14 sections usually means restating data that already lives in Sheet 1-4.
 
 **Formula-reference rule (mandatory).** Any derived numeric figure in the Methodology prose (implied multiplier, aging factor, months gap, fully burdened rate, total hours) MUST be a cell reference, not a hardcoded string. Use `=TEXT(Sheet1!B12,"0.0000")` for the aging factor, `=TEXT('Cost Buildup'!$B$19,"0.00""x""")` for implied multiplier, etc. If you hardcode "1.0615" or "2.47x" as text and the user later changes B6 (escalation) or B10 (contract start) or any wrap rate cell, the Methodology goes silently stale while the workbook numbers update. This is a workbook-consistency trap; no exceptions.
 
@@ -810,6 +817,7 @@ Verify the computed total lands within 1% of your Python-side expected total. If
 - **claude.ai web chat:** copy to `/mnt/user-data/outputs/<name>.xlsx` and call `present_files([...])`.
 - **Claude Code CLI:** write to `$PWD` or user-supplied path. Print the absolute path. On macOS also run `open <path>`; on Linux `xdg-open <path>`; on Windows `start "" <path>`. Do NOT try `/mnt/user-data/outputs/` — does not exist outside claude.ai.
 - **macOS Claude Desktop with Numbers:** write path, run `open <path>`. Numbers auto-recalculates on open.
+- **macOS Claude Code CLI with Excel or Numbers installed:** write to `$PWD`, then run `open <path>`. The system default handler triggers recalc on open; no Python-side expected-total check is needed.
 
 Do NOT skip delivery. A workbook in the sandbox that isn't surfaced looks like a silent failure.
 

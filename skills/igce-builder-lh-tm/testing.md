@@ -260,6 +260,10 @@ The skill had accumulated redundancies and verbose prose across the inheritance.
 
 Queued for Wave 3.
 
+## Wave 3 (inherited from CR Wave 1 lazy-prompt testing)
+
+**Wave 3** (Cross-skill patches inherited from CR Wave 1 lazy-prompt testing): CR Wave 1 found 22 issues, 14 patched. All 7 universal patches ported to LH/T&M identically to FFP: DOE lab crosswalk rows added, BLS MSA URL fallback, Workflow A ambiguous rule, Step 9 macOS Excel/Numbers branch, BLS wage-cap 10% rule, shift coverage upfront, Methodology depth. Plus 5 editorial fixes: Rate Validation neutral phrasing, Sheet 4 travel include-stub, Stage A/B skip clarification, igce_benchmark default, NAICS/PSC proactive. **Status:** inherited, not re-tested on LH/T&M. LH/T&M remains validated through Wave 2 (S1 FHWA + S2 Pentagon).
+
 ## Independent grading methodology
 
 Wave 1 testing record produced under consistent methodology:
