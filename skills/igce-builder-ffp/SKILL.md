@@ -13,8 +13,7 @@ description: >
   scenario analysis, or FFP rate comparison. Do NOT use for Labor Hour,
   T&M, or cost-reimbursement IGCEs (use IGCE Builder LH/T&M or IGCE
   Builder CR). Do NOT use for grant budgets (use Grant Budget Builder).
-  Requires BLS OEWS API, GSA CALC+ Ceiling Rates API, and GSA Per Diem
-  Rates API skills.
+  Requires the bls-oews, gsa-calc, and gsa-perdiem MCP servers.
 ---
 
 # IGCE Builder: Firm-Fixed-Price (FFP)
@@ -23,19 +22,54 @@ description: >
 
 This skill produces Independent Government Cost Estimates for FFP contracts using a layered wrap rate buildup model. Instead of the single burden multiplier used in T&M/LH pricing, FFP separates direct labor, fringe benefits, overhead, G&A, and profit into distinct auditable cost pools. The BLS base wage anchors the estimate; each cost pool adds a layer; the result is a fully burdened FFP rate per labor category.
 
-**Required L1 skills (must be installed):**
-1. **BLS OEWS API** -- market wage data by occupation and geography
-2. **GSA CALC+ Ceiling Rates API** -- awarded GSA MAS schedule hourly rates
-3. **GSA Per Diem Rates API** -- federal travel lodging and M&IE rates
+**Required MCP servers:**
+1. **bls-oews** -- market wage data by occupation and geography. Key tools: `get_wage_data`, `igce_wage_benchmark`, `list_common_metros`, `list_common_soc_codes`.
+2. **gsa-calc** -- awarded GSA MAS ceiling hourly rates. Key tools: `suggest_contains`, `exact_search`, `keyword_search`, `igce_benchmark`, `price_reasonableness_check`.
+3. **gsa-perdiem** -- federal CONUS travel lodging and M&IE. Key tools: `lookup_city_perdiem`, `estimate_travel_cost`, `get_mie_breakdown`.
 
-**Required API keys (must be in user memory):**
-- BLS API key (v2) for BLS OEWS
-- api.data.gov key for GSA Per Diem
-- CALC+ requires no key
-
-If a key is missing, prompt the user to register: BLS at https://data.bls.gov/registrationEngine/, api.data.gov at https://api.data.gov/signup/
+The MCPs handle API keys, URL construction, series ID assembly, MSA renumbering, JSON path parsing, and the 75% first/last day M&IE rule. Call the tools directly; do not hand-construct API requests.
 
 **Regulatory basis:** FAR 15.402 (cost/pricing data). FAR 15.404-1(a) (cost analysis). FAR 15.404-1(b) (price analysis). FAR 15.404-4 (profit/fee analysis). FAR 16.202 (FFP contracts).
+
+## Operating Principle (ai-boundaries)
+
+This skill **assembles data** and **formats documents** from reasoning the contracting officer supplies. It does NOT originate evaluative conclusions. Specifically:
+
+- The skill pulls BLS wages, CALC+ ceiling rates, and Per Diem rates, and formats them into a workbook.
+- The skill does NOT determine whether a rate is "fair and reasonable" under FAR 15.404-1. That determination is the CO's.
+- The skill does NOT assert premiums (TS/SCI, OCONUS, SCIF, specialty labor) that are outside BLS/CALC+/Per Diem data. If a premium is needed and the data does not support it, the skill names the gap and hands the decision back to the CO.
+- The skill does NOT draft a price reasonableness memo, a responsibility determination, or any FAR-citing signature document unless the CO has already supplied the rationale and conclusion, in which case the skill formats the CO's text into the template.
+- Narrative prose (chat summaries, Methodology sheet, Rate Validation status) avoids evaluative verbs: "defensible," "reasonable," "acceptable," "competitive," "outlier." Replace with neutral positioning: "at P77 of CALC+ pool (n=X)," "within BLS P90 fully-burdened equivalent," "above P50 by Y%, document stacked factors in Methodology."
+
+If you find yourself writing a conclusion about whether a number is right or wrong, stop. Present the data and let the CO conclude.
+
+## Pre-flight: MCP dependency check
+
+**Runs before Workflow Selection. Required on every skill trigger.**
+
+This skill needs three MCP servers: `bls-oews`, `gsa-calc`, `gsa-perdiem`. Do not proceed to any workflow until both checks below pass.
+
+**Check 1: MCP presence.** Verify all three are available in the current session by looking for one known tool from each:
+
+- `bls-oews` (check for `mcp__bls-oews__detect_latest_year`)
+- `gsa-calc` (check for `mcp__gsa-calc__suggest_contains`)
+- `gsa-perdiem` (check for `mcp__gsa-perdiem__get_mie_breakdown`)
+
+If any are missing, respond with:
+
+> This skill requires the `bls-oews`, `gsa-calc`, and `gsa-perdiem` MCP servers. Missing: [list]. Install and configure them in your MCP client before using this skill.
+
+**Check 2: API key presence.** Two of the three need API keys. Verify by lightweight ping:
+
+- `mcp__bls-oews__detect_latest_year` (needs a BLS API key)
+- `mcp__gsa-perdiem__get_mie_breakdown` (needs an api.data.gov key)
+- `gsa-calc` needs no key, skip
+
+If either ping returns an auth error or missing-key error, respond with:
+
+> [bls-oews | gsa-perdiem] is installed but its API key is not set. This MCP needs a free API key (BLS for `bls-oews`, api.data.gov for `gsa-perdiem`). Register the key with the provider and add it to the MCP's configuration, then restart your MCP client.
+
+Only proceed to Workflow Selection after both checks pass. Do not try to work around missing MCPs by calling APIs directly; the skill relies on MCP-guaranteed behaviors (MSA renumbering lookups, JSON path normalization, first/last day M&IE math).
 
 ## Workflow Selection
 
@@ -49,16 +83,42 @@ Triggers: "build an FFP IGCE from this SOW," "price this PWS as FFP," or when th
 
 **Skip Step 0 if the user provides explicit staffing** (headcount per labor category) even if they reference an underlying PWS or SOW. Go straight to Workflow A.
 
-### Workflow B: FFP Rate Validation Only
-User has proposed rates and wants to check reasonableness. Compare against CALC+ and optionally BLS with wrap rate buildup.
-Triggers: "is this FFP rate reasonable," "validate these wrap rates," "check this FFP proposal."
+### Workflow B: FFP Rate Positioning (Data Only, No Determination)
+
+User has proposed rates and wants to see where they sit against market data. The skill returns the data and the CO decides reasonableness. **The skill does not produce a "fair and reasonable" determination, a signed memo, or advisory text telling the CO how to negotiate.**
+
+Triggers: "is this FFP rate reasonable," "validate these wrap rates," "check this FFP proposal," "price reasonableness analysis."
 
 **Workflow B steps:**
-1. Collect the vendor's proposed labor categories and fully burdened hourly rates.
-2. For each category, query CALC+ per Step 4.
-3. Position each rate: below 25th percentile (aggressive), 25th-75th (competitive), above 75th (premium), above 90th (outlier requiring justification).
-4. If the user wants BLS context, run Steps 1-3 to show where the vendor rate falls relative to the wrap rate buildup at low/mid/high scenarios.
-5. Produce the Rate Validation sheet and narrative. No full workbook unless requested.
+
+1. Collect the vendor's proposed labor categories, fully burdened hourly rates, and any scope context (metro, clearance, experience tier).
+
+2. For each LCAT, call `mcp__gsa-calc__price_reasonableness_check(labor_category, proposed_rate, experience_min, education_level)`. The MCP returns count, min/max, median, IQR bounds, z-score, and percentile position. If sample size is below ~25 records, label the pool "directional only, not statistical validation."
+
+3. For senior LCATs, also run the Step 4 dual-pool flow (title-match via `suggest_contains` + `exact_search`, plus experience-match via `igce_benchmark`) and present both medians side-by-side.
+
+4. If metro context matters (DC, SF, NYC, Boston, etc.), pull BLS OEWS for that metro via `mcp__bls-oews__get_wage_data` and present the P50/P75/P90 fully-burdened equivalent using the vehicle wrap preset. This shows how the rate sits against local market labor independent of the CALC+ nationwide pool.
+
+5. **Present a neutral positioning summary.** Example format:
+
+> Proposed rate: $225/hr fully burdened, Senior Data Scientist, DC metro, Agency BPA cleared.
+>
+> CALC+ benchmark (Senior Data Scientist, 8+ yrs, n=7, thin-corpus directional only):
+> - P25 $170, P50 $190, P75 $218, P90 $236
+> - Proposed rate at P77, z-score 1.1, within 2σ outlier bounds ($139-$250)
+>
+> BLS OEWS DC metro (15-2051 Data Scientists, 2024 vintage aged to [contract start] at 2.5%):
+> - P50 annual $135,190, P90 annual $208,600
+> - Applied Agency BPA cleared wrap (3.17x) to P90 hourly: fully-burdened equivalent $234
+>
+> Premium factors this data does NOT capture: TS/SCI clearance premium, any SCIF-specific overhead, specialty cyber/data-science labor market tightness. If the CO intends to attribute part of the premium to clearance, the clearance premium range is the CO's to set based on agency policy or independent market research.
+
+6. **Stop.** Do not write "the rate is fair and reasonable." Do not recommend negotiation positions. Do not suggest "push back only if..." text.
+
+7. **Memo drafting gate.** If the user asks for a price reasonableness memo:
+   - **If the user has NOT supplied the rationale and conclusion:** respond "Provide the rationale you want documented and your fair-and-reasonable conclusion (or the determination you intend to make). I'll format it into the memo template with the benchmark tables."
+   - **If the user HAS supplied the rationale:** format the CO's exact text into the memo template. Fill in benchmark tables with the data pulled in Steps 2-4. Leave Section 7 (Determination) with the CO's supplied conclusion language verbatim; do not paraphrase or add hedging.
+   - The memo is always marked DRAFT until the CO signs. Use `[Contracting Officer Name]` and `[Agency]` placeholders.
 
 ## Information to Collect
 
@@ -98,7 +158,7 @@ Batch clarifying questions rather than ask iteratively. If key inputs are missin
 
 ### Wrap Rate Component Guidance
 
-Provide this when the user is unsure about cost pool rates:
+**This table is a sensitivity reference for scenario Low/High bounds, NOT a default pick for MID.** MID should come from the Vehicle Preset table below when a vehicle applies. The Low/High columns here are the outer envelope used to stress-test scenarios once MID is set.
 
 | Component | Low | Mid | High | Notes |
 |-----------|-----|-----|------|-------|
@@ -107,33 +167,31 @@ Provide this when the user is unsure about cost pool rates:
 | G&A | 8% | 12% | 18% | Higher for large corporate structures |
 | Profit | 7% | 10% | 15% | FAR 15.404-4: risk, investment, complexity |
 
+The generic Mid (32/80/12/10 → 2.93x) matches the **DoD non-cleared** vehicle preset. Do not apply it to GSA MAS commercial, Agency BPA, DoE M&O, or OCONUS builds without checking the Vehicle Preset table.
+
 ### Wrap Rate Presets by Contract Vehicle
 
 **CRITICAL: ASK about contract vehicle before applying default wrap rates.** Workers have historically defaulted to skill mid (32/80/12/10, implied multiplier 2.93x) regardless of vehicle. That is correct for GSA MAS commercial or agency BPA non-cleared, but materially wrong for DoE M&O, cleared DoD, or OCONUS. Use this table to select MID scenario defaults keyed by the actual vehicle/environment the contract will use:
 
-| Vehicle / environment | Fringe | Overhead | G&A | Profit | Implied multiplier | Notes |
-|----------------------|--------|----------|-----|--------|-------------------|-------|
-| GSA MAS (commercial) | 30% | 60% | 10% | 8% | **2.47x** | SIN 520, 541611, etc. Ceiling-rate vehicle |
-| GSA MAS (cleared services) | 32% | 80% | 12% | 8% | **2.59x** | MAS with clearance overhead |
-| Agency BPA / IDIQ (non-cleared) | 32% | 75% | 12% | 10% | **2.53x** | Mid-range commercial services |
-| Agency BPA / IDIQ (cleared) | 32% | 95% | 12% | 10% | **2.91x** | TS/SCI in SCIF |
-| DoD prime (non-cleared) | 32% | 80% | 12% | 10% | **2.93x** | DCMA oversight standard |
-| **DoD prime (Secret, non-SCIF)** | **32%** | **100%** | **12%** | **10%** | **3.25x** | **Secret-cleared without SCIF** |
-| DoD prime (SCIF / deployed) | 32% | 120% | 14% | 10% | **3.67x** | Full SCIF buildout, TS/SCI |
-| **DoE M&O / FFRDC** | **35%** | **95%** | **12%** | **8%** | **3.18x** | **UT-Battelle, LANS, Sandia patterns; higher fringe, lower profit** |
-| R&D / BAA CR | 32% | 90% | 12% | 8% | **2.99x** | Lower profit layer; fee separate on CR |
-| OCONUS / hostile theater | 35% | 120% | 14% | 12% | **3.80x** | Hazard, austere env, insurance |
+| Vehicle / environment | Fringe | Overhead | G&A | Profit | Implied mult | Expected band |
+|----------------------|--------|----------|-----|--------|--------------|---------------|
+| GSA MAS (commercial) | 30% | 60% | 10% | 8% | **2.47x** | 2.3-2.7x |
+| GSA MAS (cleared services) | 32% | 80% | 12% | 8% | **2.87x** | 2.7-3.1x |
+| Agency BPA / IDIQ (non-cleared) | 32% | 75% | 12% | 10% | **2.85x** | 2.7-3.1x |
+| Agency BPA / IDIQ (cleared) | 32% | 95% | 12% | 10% | **3.17x** | 3.0-3.4x |
+| DoD BPA (TS/SCI SCIF) | 32% | 115% | 13% | 10% | **3.39x** | 3.2-3.6x |
+| DoD prime (non-cleared) | 32% | 80% | 12% | 10% | **2.93x** | 2.7-3.1x |
+| DoD prime (Secret, non-SCIF) | 32% | 100% | 12% | 10% | **3.25x** | 3.0-3.4x |
+| DoD prime (SCIF / deployed) | 32% | 120% | 14% | 10% | **3.64x** | 3.5-3.8x |
+| DoE M&O / FFRDC | 35% | 95% | 12% | 8% | **3.18x** | 3.0-3.4x |
+| R&D / BAA CR | 32% | 90% | 12% | 8% | **3.03x** | 2.9-3.3x |
+| OCONUS / hostile theater | 35% | 120% | 14% | 12% | **3.79x** | 3.6-4.0x |
+
+*Notes on vehicle selection:* GSA MAS commercial = SIN 520, 541611, ceiling-rate vehicle. Agency BPA/IDIQ cleared = TS/SCI in SCIF. DoE M&O/FFRDC = UT-Battelle, LANS, Sandia (higher fringe, lower profit). R&D/BAA CR carries lower profit; fee is separate on CR contracts.
 
 **Math check:** Multipliers computed as `(1+fringe) × (1+OH) × (1+G&A) × (1+profit)`. Example GSA MAS commercial: 1.30 × 1.60 × 1.10 × 1.08 = 2.47x. Verify this arithmetic in your workbook; Methodology narrative must match the actual cell values, not a rounded guess.
 
-**Sanity band is vehicle-aware.** The generic 2.2x-3.5x "commercial CONUS" band does NOT apply to every vehicle. Vehicle-specific expected ranges:
-- GSA MAS commercial / Agency BPA non-cleared: 2.2x-2.6x
-- Agency BPA cleared / DoD non-cleared: 2.8x-3.0x
-- DoD Secret non-SCIF: 3.1x-3.4x
-- DoD SCIF / DoE M&O / R&D CR: 3.0x-3.8x
-- OCONUS / hostile theater: 3.5x-4.2x
-
-Flag for user review only if the MID multiplier falls OUTSIDE its vehicle-specific band. A 3.25x DoD Secret non-SCIF build is normal; a 3.25x GSA MAS commercial build is not.
+**Sanity band is pinned to each preset row above.** Flag for user review only if the MID multiplier falls OUTSIDE the band shown in that row. A 3.17x Agency BPA cleared build lands in its 3.0-3.4x band (normal); a 3.17x GSA MAS commercial build is outside 2.3-2.7x (flag).
 
 **Use the MID column as your scenario mid. Generate LOW as mid minus ~20% on each component, HIGH as mid plus ~20%.**
 
@@ -183,7 +241,13 @@ Security Operations     | InfoSec Analyst     | 15-1212  | 1-2       | Continuou
 Project Oversight       | Project Manager     | 13-1082  | 1         | Single contract
 ```
 
-6. **User validation gate (CRITICAL).** Response MUST END after presenting the decomposition table. Use `AskUserQuestion` with multi-choice defaults where possible. DO NOT self-approve and proceed to workbook build. DO NOT continue past the validation step in the same turn. Wait for explicit user confirmation before any Step 1+ work.
+6. **User validation gate (CRITICAL) - two stages, not one.** Do not conflate "confirm the decomposition" with "pick build parameters." Run them separately:
+
+   **Stage A - Decomposition validation.** After presenting the decomposition table, ask the user to confirm or amend it. Use `AskUserQuestion` with options like "Decomposition looks right, proceed" / "Modify LCAT X" / "Add LCAT Y" / "Adjust FTE estimates." Response MUST END after this question. Wait for explicit confirmation before continuing.
+
+   **Stage B - Build parameters.** Only after the decomposition is confirmed, ask the remaining parameter questions (vehicle preset, metro, contract start, hour-allocation method for FFP-by-deliverable, shift coverage density if 24x7). Use a separate `AskUserQuestion` call. Response MUST END after this question.
+
+   DO NOT self-approve either stage. DO NOT skip Stage A to go straight to parameters. Proceeding to Step 1+ before Stage B is also answered is a skill violation. The user must affirmatively validate BOTH the decomposition and the parameters before build work begins.
 
 ### Step 0.5: Shift Coverage Staffing (if PWS specifies 24x7, continuous, or on-call)
 
@@ -200,6 +264,23 @@ The 4.2 factor accounts for ~25% non-productive time: PTO (10%), federal holiday
 Document shift-coverage FTE derivation in the Methodology sheet: "24x7x365 SOC coverage at single-seat: 4.2 FTE per covered position per industry standard accounting for leave and training backfill."
 
 **Escalation overlay.** Add on-call or overtime reserve for surge-driven work beyond base coverage. Typical on-call premium: 10-15% of base labor hours for incident response positions.
+
+**Travel for shift-coverage roles.** If the requirement includes travel, default to **1 representative per trip** (rotating shift lead or designated trip captain), NOT the full 4.2 FTE. Note the convention in Methodology: "Shift coverage uses a single traveler per trip; remaining shift members stay on site to maintain coverage." Ask the user only if they explicitly say "all staff travel" or the PWS requires multiple attendees.
+
+**Tier 1 vs Tier 2 distinction.** When a PWS says "24x7 Tier 2" or "24x7 Tier 2 incident response" specifically, do NOT blindly apply 4.2 FTE as if it were full 24x7 SOC coverage. Tier 2 is often an on-call overlay on existing Tier 1 monitoring rather than a separate round-the-clock seat. Ask the user to clarify via `AskUserQuestion`:
+
+- "Tier 2 as a standalone 24x7 coverage layer (4.2 FTE single-seat)"
+- "Tier 2 as on-call overlay on existing Tier 1 (typically 2-3 FTE with on-call premium)"
+- "Tier 1 + Tier 2 both contractor-provided (4.2 FTE Tier 1 + 2-3 FTE Tier 2)"
+
+Document the choice in Methodology with the FTE derivation.
+
+**TS/SCI compliance overhead (optional).** On cleared contracts (TS/SCI, SCIF-based, or DoE M&O), NIST SP 800-53 continuous monitoring, STIG remediation, and accreditation maintenance typically consume 5-10% of staff time. This is NOT captured in the BLS wage data. If the requirement references cleared operations, ask the user whether to:
+
+- Absorb compliance overhead into base FTE counts (default, no action needed)
+- Add a 5-10% overhead buffer as a separate labor line, with CO confirmation on the percentage
+
+Document the choice. Do not apply the buffer silently.
 
 ### Step 1: Map Labor Categories to SOC Codes
 
@@ -269,30 +350,39 @@ When mapping is ambiguous, query multiple SOC codes and present the range.
 
 ### Step 2: Pull BLS Wage Data
 
-**Use the BLS OEWS API skill.** For each labor category, query datatypes 04 (annual mean), 11-15 (annual 10th/25th/50th/75th/90th percentiles), plus 02 and 05 (employment RSE and wage RSE for data quality signals) at the user's performance location.
+Call `mcp__bls-oews__get_wage_data(occ_code, scope, area_code, datatypes)` for each labor category. Pass a 6-char SOC, scope `metro|state|national`, and area_code (5-digit MSA for metro, 2-digit FIPS for state). Request datatypes `["04", "11", "12", "13", "14", "15"]` for mean + P10/P25/P50/P75/P90. Valid datatypes accepted by the MCP are `01, 03, 04, 08, 11, 12, 13, 14, 15` only; do NOT pass `02` or `05` (the MCP rejects them).
 
-**Series ID format (25 chars total):** `{PREFIX:4}{AREA:7}{INDUSTRY:6}{SOC:6}{DATATYPE:2}` = 25. Common mistake: using 8-char SOC codes with trailing zeros. SOC must be exactly 6 chars (e.g., `151212` not `15121200`).
+The MCP builds the 25-char series ID, handles footnote code 5 (cap) vs. code 8 (suppression), and exposes the current MSA list via `list_common_metros` with OMB Bulletin 23-01 renumbering notes. You do not need to hedge against Cleveland 17410 or Dayton 19430 yourself.
 
-**Geography fallback:** metro (OEUM) > state (OEUS) > national (OEUN). Present the full wage distribution. Recommend the median (50th percentile) as default basis.
+**Geography fallback (caller's job):** metro first; if the MCP returns "series does not exist" on every datatype, try state; fall back to national. Recommend the median as the default basis and present the full distribution.
 
-**Seniority modeling when BLS lacks granularity.** BLS typically does not break out junior / mid / senior variants within a single SOC. When a PWS specifies seniority tiers but the SOC is single, use percentile positioning as a documented convention:
+**Known-fragile SOCs at metro level.** Some specialty SOCs are commonly suppressed outside major tech hubs and routinely force a state-level fallback. Expect suppression on: 15-1212 (Information Security Analyst) for most mid-size metros including Cleveland, 15-2051 (Data Scientist) outside SF/DC/Seattle/Boston, 19-2012 (Physicists) outside DOE lab metros. Fall straight to state without treating it as a data quality signal.
 
-- Junior / entry: P25 (25th percentile)
-- Mid / journeyman: P50 (median)
-- Senior: P50 to P75 depending on scope and BLS distribution shape
+**Shortcut:** for a single-LCAT single-location sanity check, `mcp__bls-oews__igce_wage_benchmark(occ_code, scope, area_code, burden_low, burden_high)` returns annual and hourly mean/median/P10/P90 with a burdened range in one call. Use for Workflow B rate checks; use `get_wage_data` when building the full workbook.
+
+**Seniority modeling when BLS lacks granularity.** BLS does not break out junior / mid / senior variants within a single SOC. When a PWS specifies seniority tiers, use percentile positioning as a documented convention:
+
+- Junior / entry: P25
+- Mid / journeyman: P50
+- Senior: P50 to P75 depending on scope and distribution shape
 - Principal / director / SME: P75 to P90
 
-Document this in Methodology as a convention, not a BLS standard. Percentile-based seniority modeling is defensible for price reasonableness but should be disclosed.
+**No tiers specified.** When the user gives an N-person team with no seniority breakdown (e.g., "3-person dev team"), default all N members to P50 (mid/journeyman) and note this in Methodology as "no seniority tiers specified, all members priced at mid-level P50 convention." Do NOT invent a 25/50/25 Jr/Mid/Sr split unless the user asks.
 
-**MSA code renumbering.** OMB Bulletin 23-01 (2020 census) renumbered some MSAs in the May 2024 OEWS release. Confirmed via live BLS API (April 2026): Cleveland 17460 → 17410, Dayton 19380 → 19430. If a previously-valid MSA code returns NO_DATA across every SOC, the metro was renumbered - do NOT assume suppression. Check the current BLS area list or try adjacent codes. See the BLS OEWS skill's MSA realignment note.
+Document this in Methodology as a convention, not a BLS standard.
 
-**Wage cap.** If BLS returns "-" with footnote code 5, the wage exceeds the $239,200 cap. Use the cap as a lower bound and flag in the narrative.
+**Wage cap ($239,200 annual / $115.00 hourly).** When the MCP flags a value as capped, use the cap as a lower bound and flag in the narrative.
 
-**Cap decision tree when P75 ALSO caps.** In single-employer-dominated metros (ORNL/Y-12 Knoxville Nuclear, certain LANL/INL physicists), P90 and sometimes P75 both cap. The BLS skill's decision tree prescribes "use P75 when P90 is capped." When P75 is also capped:
-1. Use BLS **Mean** (datatype 04) as the senior-tier anchor. Document as "P75 capped, Mean used as uncapped senior anchor."
+**Cap decision tree when P75 ALSO caps.** In single-employer-dominated metros (ORNL/Y-12 Knoxville Nuclear, certain LANL/INL physicists), P90 and sometimes P75 both cap. When P75 is capped:
+1. Use BLS Mean (datatype 04) as the senior-tier anchor. Document as "P75 capped, Mean used as uncapped senior anchor."
 2. Cross-reference commercial compensation surveys (Radford, Mercer, Payscale) for the specialty market.
-3. Apply national P75/median ratio to the local median as a derived P75 estimate. Document as derivation, not BLS figure.
+3. Apply national P75/median ratio to the local median as a derived P75. Document as derivation, not BLS figure.
 4. Never use $239,200 as the point estimate; it is a floor, not the value.
+
+**Compressed distributions (P25 equals P10).** In the same single-employer metros, the lower half of the distribution can also compress: P25 and P10 return identical values because the dominant employer anchors even the lowest-paid workers at its own scale. When P25 = P10:
+- The local P50 itself is likely pulled toward the dominant employer's mid-tier, not a genuine market median.
+- Document in Methodology: "distribution compressed (P25=P10=$X); P50 reflects dominant-employer scale, not broader market."
+- For Junior-tier pricing, do NOT use P25. Use national P25 × (local P50 / national P50) ratio to reconstruct a defensible junior anchor.
 
 ### Step 2B: Age BLS Wages to Contract Start Date
 
@@ -349,84 +439,112 @@ For SCIF, cleared, or OCONUS environments, the mid multiplier routinely hits 3.0
 
 ### Step 4: Cross-Reference Against CALC+
 
-**Use the GSA CALC+ Ceiling Rates API skill.** Follow the discovery-first pattern; do NOT use the `keyword=` parameter alone for rate statistics.
+Follow a discovery-first pattern. The MCP returns clean aggregation stats; your job is picking the right tool for the pool you want.
 
-**CALC+ endpoint and query signature (inline to prevent silent-wrong-answer bugs):**
+**Decision tree:**
+
+1. **Discover buckets.** Call `mcp__gsa-calc__suggest_contains(field="labor_category", term=<LCAT term>)`. Returns up to 100 buckets with `doc_count` per bucket plus a `likely_truncated` flag. If truncated, narrow the term.
+2. **If the top 2-3 buckets have combined records >=50:** call `mcp__gsa-calc__exact_search(field="labor_category", value=<exact bucket name>)` for each, then aggregate. This avoids the wildcard-match contamination that `keyword_search` produces (it also matches vendor_name and idv_piid).
+3. **If buckets are fragmented** (every bucket under ~30 records, common for niche cleared cyber / specialty engineering): fall back to `mcp__gsa-calc__keyword_search(keyword=<term>)`. Document the contamination caveat in Methodology.
+4. **One-shot alternative:** `mcp__gsa-calc__igce_benchmark(labor_category=<exact>, experience_min=N, education_level=X)` returns count, min/max/mean, std dev, and P10/P25/P50/P75/P90 in one call. Good when the bucket name is already known.
+
+The MCP returns canonical stats at the top level of the response dict (count, min_rate, max_rate, avg_rate, p25, p50, p75). No JSON-path archaeology required.
+
+**Rate validation positioning (data only, not a determination).** Present the vendor's / IGCE's FBR against CALC+ P25/P50/P75 as a positional statement. Do NOT assert "reasonable," "defensible," "outlier requiring justification," or "within expected band." Those are CO determinations. The skill describes WHERE the rate sits and documents the stacked factors that place it there.
+
+**Narrative positioning language (use this, not evaluative verbs):**
+- "Rate sits at CALC+ P77 (n=7, thin-corpus directional only)."
+- "Above P50 by X%; stacked factors: [metro, seniority tier, aging, wrap vs commercial]."
+- "Below P25; pool composition or LCAT alignment may warrant CO review."
+- "Premium factors not captured by this data: [TS/SCI clearance premium, SCIF overhead, specialty market]. CO sets the relevant premium band if one applies."
+
+**Stacked premium: show the math, do not conclude.** When divergence above CALC+ P50 looks large (40%+), decompose the divergence into its source factors so the CO can see where the premium comes from. Worked example:
 
 ```
-Base URL:  https://api.gsa.gov/acquisition/calc/v3/api/ceilingrates/
-Auth:      None required
-Parameter: keyword=<term>           (NOT q=; q is silently ignored and returns 265,308-record full corpus)
-Better:    search=labor_category:<exact bucket name>   (precise, no cross-field contamination)
+FBR at IGCE mid:        $283
+CALC+ national P50:     $135
+Raw divergence:         +110%
+
+Source decomposition:
+  Metro ratio          (Baltimore BLS / national BLS): 1.15x
+  Seniority tier       (P75 / P50 within SOC):          1.30x
+  Aging                (34 months @ 2.5%/yr):           1.072x
+  Wrap vs commercial   (DoD SCIF 3.64 / MAS 2.47):      1.47x
+  Compounded ratio:     1.15 × 1.30 × 1.072 × 1.47 = 2.36x
+  → FBR at 2.36x of CALC+ national P50 = $318 expected
+  Actual FBR is 11% below the expected stacked-factor rate.
 ```
 
-**Why this matters:** the `keyword=` parameter searches three fields simultaneously (labor_category, vendor_name, idv_piid). A search for "Program Manager" returns 7,763 records, but only ~1,849 are actually Program Manager LCATs; the remainder are vendor-name and PIID matches that pollute the statistics.
+Present this table in Methodology. Do NOT write "this is defensible" or "the CO can conclude reasonableness"; present the decomposition and let the CO conclude. If actual FBR is significantly above the stacked-factor expectation, flag which factor is larger than data supports and let the CO decide how to adjust.
 
-**CALC+ query-mode decision tree:**
+**Calibration guidelines for Sheet 4 Status column (positioning only, not determinations):**
 
-1. **Discovery:** `suggest-contains=labor_category:<term>` - returns up to 100 bucket names with counts.
-2. **If top 3 buckets have >=50 combined records:** use `search=labor_category:<exact bucket>` for each. This produces clean stats with no cross-field contamination.
-3. **If buckets are fragmented (every bucket has <30 records, common for niche cleared cyber or specialty engineering):** fall back to `keyword=<term>` with `filter=price_range:30,500` to strip outliers. Document the contamination caveat in Methodology.
-4. **If `suggest-contains` returns exactly 100 buckets:** the API truncated - narrow the discovery term.
+- **0-15% above P50:** "Within CALC+ FFP premium range"
+- **15-40% above P50:** "Above P50 by 15-40%; typical FFP risk premium range"
+- **40-70% above P50:** "Above P50 by 40-70%; expected in high-cost metros vs nationwide CALC+. See Methodology for factor decomposition."
+- **>70% above P50:** "Above P50 by >70%; factor decomposition in Methodology. CO review recommended for factors outside BLS/CALC+ data."
+- **Below P25:** "Below P25; CO review recommended."
 
-**CRITICAL JSON paths for CALC+ statistics (all under `aggregations`, NOT top-level):**
-```python
-aggs = response_json["aggregations"]           # NOT response_json["wage_stats"]
-count    = aggs["wage_stats"]["count"]
-min_rate = aggs["wage_stats"]["min"]
-max_rate = aggs["wage_stats"]["max"]
-avg_rate = aggs["wage_stats"]["avg"]
-median   = aggs["histogram_percentiles"]["values"]["50.0"]   # CORRECT median
-p25      = aggs["histogram_percentiles"]["values"]["25.0"]
-p75      = aggs["histogram_percentiles"]["values"]["75.0"]
+The Sheet 4 Status column labels position the rate; it does NOT say "reasonable" or "outlier." If the user asks the skill to assert reasonableness, refer them to the ai-boundaries principle at the top of this skill.
 
-# Discovery (suggest-contains) response shape:
-buckets = aggs["labor_category"]["buckets"]    # NOT aggs["results"] or aggs["suggestions"]
-for b in buckets:
-    name   = b["key"]          # bucket label
-    count  = b["doc_count"]    # records in that bucket
-```
+**Dual-pool analysis for senior LCATs.** For "Senior X" requirements, the MCP does not auto-dual-pool. Query both title-match (`suggest_contains` then `exact_search` on "Senior X") and experience-match (`igce_benchmark` with `experience_min=8`) and present both medians. They often differ by 10-15%; the CO picks which better matches the vendor's LCAT description.
 
-**WARNING:** Do NOT read from `wage_percentiles` (empty when page_size=0). Always use `histogram_percentiles`. Do NOT read `wage_stats` from the top level - it lives under `aggregations`.
+**Known-fragmented LCAT terms.** Some common job titles return fragmented CALC+ buckets (no single bucket with enough records for clean stats). Use these canonical queries instead:
+- "SOC analyst" / "cyber analyst" → query `Information Security Analyst I/II/III` (15-1212 pool has tiered buckets)
+- "Software engineer" as a generic role → query `Software Developer I/II/III` tiers
+- "Data engineer" → often returns <10 records; fall back to `igce_benchmark` on Data Scientist with experience filter
 
-**Apply `filter=price_range:30,500` by default** for professional services IGCE work. Strips clerical outliers (sub-$30 data entry rates) and sentinel placeholders ($9,999). Adjust bound for specialty work: `price_range:50,600` for cleared SCIF; `price_range:15,200` for routine administrative.
-
-**Rate validation flagging - FFP premium is structural.** FFP burdened rates running above CALC+ medians is expected, not anomalous. CALC+ contains T&M/LH ceiling rates that do not embed the cost-risk premium FFP carries. Calibration:
-
-- **0-15% above P50:** expected, within normal FFP premium band
-- **15-40% above P50:** typical for FFP in DC/high-cost metros against worldwide CALC+; document as expected
-- **>40% above P50:** requires justification - clearance, SCIF, specialty labor pool, or geographic premium not captured elsewhere
-- **Below P25:** unusual - may indicate under-priced estimate or niche LCAT misalignment
-
-Do NOT flag 15-40% divergence as "outlier requiring justification." Flag only divergence >40% or below P25.
-
-**Dual-pool analysis for senior LCATs.** For "Senior X" requirements, both title-match (`suggest-contains=labor_category:Senior X`) and experience-match (`X + min_years_experience:8` filter) are legitimate benchmark pools. They often differ by 10-15% at median. Present both side-by-side. The CO decides which better matches the vendor's LCAT description.
+**Workflow B shortcut:** `mcp__gsa-calc__price_reasonableness_check(labor_category, proposed_rate, education_level, experience_min)` returns z-score and percentile position directly. Use for vendor rate validation without a full workbook.
 
 ### Step 5: Pull Per Diem Rates (If Travel Required)
 
-**Use the GSA Per Diem Rates API skill.** Query monthly lodging rates and M&IE for each destination.
+Call `mcp__gsa-perdiem__estimate_travel_cost(city, state, num_nights, travel_month=None, fiscal_year=None)` per destination. The MCP returns `nightly_lodging`, `lodging_total`, `daily_mie`, `first_last_day_mie`, `mie_total`, `grand_total`, and `travel_days`. First/last day 75% M&IE and the day-trip (0 nights) edge case are handled internally per FTR 301-11.101. If `travel_month` is omitted, the MCP uses the max monthly lodging rate as a conservative ceiling.
+
+**Annual travel math:** `annual_travel = grand_total * trips_per_year * travelers`.
+
+**DoD installation → GSA per diem city crosswalk.** GSA keys per diem by civilian locality, not by military installation. Looking up "Fort Meade" or "Pentagon" directly returns empty. Translate the installation to its GSA locality BEFORE calling the MCP:
+
+| DoD installation | GSA locality | Metro |
+|---|---|---|
+| Fort Meade, MD | Annapolis / Anne Arundel County, MD | Baltimore |
+| Fort Belvoir, VA | Fairfax / Alexandria, VA | DC |
+| Pentagon, VA | Arlington, VA (use DC rate) | DC |
+| Joint Base Andrews, MD | District of Columbia | DC |
+| NSA Bethesda / Walter Reed, MD | Montgomery County, MD | DC |
+| Fort Liberty (Bragg), NC | Fayetteville, NC | Fayetteville |
+| Peterson SFB / Schriever SFB / Fort Carson, CO | Colorado Springs, CO | Colorado Springs |
+| Wright-Patterson AFB, OH | Dayton, OH | Dayton |
+| Eglin AFB, FL | Fort Walton Beach, FL | Pensacola-Crestview |
+| JB San Antonio / Randolph / Lackland, TX | San Antonio, TX | San Antonio |
+| Hanscom AFB, MA | Bedford / Boston, MA | Boston |
+| Redstone Arsenal, AL | Huntsville, AL | Huntsville |
+| Offutt AFB, NE | Omaha / Bellevue, NE | Omaha |
+| Cape Canaveral / Patrick SFB, FL | Cocoa Beach / Cape Canaveral, FL | Palm Bay-Melbourne |
+| JB Lewis-McChord, WA | Tacoma / Pierce County, WA | Seattle-Tacoma |
+
+If the installation is not on this list, query `mcp__gsa-perdiem__lookup_city_perdiem` with the nearest civilian city and cross-check the result's `county` field.
+
+**"Between sites" travel canonical interpretation.** When user says "quarterly travel between sites" or "monthly travel between sites" with multiple locations, default to: trips/year TOTAL **split evenly across destinations**, NOT trips/year each way. Example: "quarterly travel between Fort Meade and Colorado Springs" = 4 trips total (2 MD→CO, 2 CO→MD), not 8. Confirm via `AskUserQuestion` only if the user says "each way" explicitly, or if the split would exceed reasonable burn rate (more than one trip per month per destination).
 
 **City Pair airfare (optional):** When origin and destination are known, look up YCA fares at cpsearch.fas.gsa.gov. Skip if origin is unknown, OCONUS, local travel, or user provides their own airfare.
 
-**Per-trip cost calculation:**
-```
-lodging_per_trip = nightly_rate * nights
-travel_days = nights + 1
-full_day_mie = mie_rate * max(0, travel_days - 2)
-partial_day_mie = mie_rate * 0.75 * 2    # first and last day at 75%
-mie_per_trip = full_day_mie + partial_day_mie
-trip_total = lodging_per_trip + mie_per_trip
-annual_travel = trip_total * trips_per_year * travelers
+**Fiscal-year fallback.** The MCP returns EITHER an empty rates array OR an explicit error string containing "No rates found for FY{year}" when the requested FY is not yet published. Trigger fallback on both cases:
+
+```python
+if response == [] or (isinstance(response, dict) and "No rates found for FY" in response.get("error", "")):
+    # retry with fiscal_year = requested_year - 1
 ```
 
-**Edge cases:**
-- **1-night trip (2 travel days):** both days are partial, so `mie_per_trip = mie_rate * 0.75 * 2`. No full days.
-- **Day trip (0 nights, 1 travel day):** single partial day per FTR 301-11.101. `mie_per_trip = mie_rate * 0.75`. Lodging = 0.
-- **Scope to overnight trips.** Skill does not auto-handle multi-stop legs or international connections.
+Note the fallback in Methodology: "FY{requested} per diem not yet published; FY{fallback} rates used as conservative baseline." Default FY policy: use contract-start FY when available; if that FY is not yet published, fall back to current FY.
 
-Use max monthly lodging rate as conservative ceiling if specific months not provided.
+**Absorbed vs discrete low-effort tasks.** The skill does not have a hard rule for when to break out quarterly tabletops, annual audits, monthly reports, or similar low-effort recurring tasks as separate labor lines vs absorbing them into base FTE counts. Convention:
 
-**If no travel is required:** do NOT omit Sheet 5. Produce it with a single "Travel - Not Applicable" block and a note about mod-based travel additions. See Step 8 workbook structure.
+- **Absorb** when the task is <5% of an existing LCAT's time and the LCAT already has the skill set to perform it (e.g., tabletop facilitation absorbed into a Senior IR LCAT's hours).
+- **Break out as separate line** when the task requires a distinct skill set, has its own deliverable cadence the CO will track, or exceeds 5% of any single LCAT's time.
+
+Document the choice in Methodology. If the user asks, offer both options via `AskUserQuestion`.
+
+**If no travel is required:** do NOT omit Sheet 5. Produce it with a single "Travel - Not Applicable" block and a note about mod-based travel additions. See Step 8 workbook structure. Also include a Travel row on Sheet 1 Summary with `0` value and "Not Applicable" note (see Step 8 Sheet 1 layout for no-travel handling).
 
 ### Step 6: Handle Multi-Location Weighting
 
@@ -490,6 +608,8 @@ Generate a multi-sheet .xlsx workbook using openpyxl. Use Excel formulas for all
 
 **Sheet 1: IGCE Summary.** Labor categories as rows, periods as columns (Structure A) OR deliverables as columns (Structure B). Rate/Hr shows fully burdened FFP rate. Extra column for implied multiplier. Travel rows below labor. Placeholder rows for Airfare, Ground Transportation, ODCs with `0` value and "TBD" in an adjacent note column - NEVER put "TBD" text in cells that feed into SUM formulas (breaks the grand total with #VALUE!). Grand total with SUM formulas.
 
+**When travel is not required:** still include a single Travel row on Sheet 1 with value `0` and "Not Applicable" in the adjacent note column (so the grand total formula stays stable and a reviewer sees travel was actively excluded, not forgotten). Sheet 5 gets the full "Travel Not Applicable" block per Step 8 Sheet 5 layout.
+
 **Assumption cell layout (Sheet 1, rows 1-11):**
 ```
 A1:  "IGCE Assumptions (FFP)"        (bold, merged A1:B1)
@@ -499,7 +619,7 @@ A4:  "G&A Rate"                      B4: 0.12      (blue font, percentage)
 A5:  "Profit Rate"                   B5: 0.10      (blue font, percentage)
 A6:  "Escalation Rate/Yr"            B6: 0.025     (blue font, percentage)
 A7:  "Productive Hours/Year"         B7: 1880      (blue font)
-A8:  "Base Year Months"              B8: 12        (blue font)
+A8:  "Base Year Months (or PoP Months)" B8: 12       (blue font; for single-period PoPs like an 18-month study, relabel "Period Months" and set to total PoP length, e.g. 18)
 A9:  "BLS Vintage (YYYY-MM)"         B9: "2024-05" (blue font, text)
 A10: "Contract Start (YYYY-MM)"      B10: "2026-10" (blue font, text)
 A11: "Months Gap"                    B11: =(VALUE(LEFT(B10,4))-VALUE(LEFT(B9,4)))*12+(VALUE(MID(B10,6,2))-VALUE(MID(B9,6,2)))
@@ -511,6 +631,15 @@ A14: header row for data table
 All labor formulas reference these cells, including the aging factor. If the user changes escalation rate, contract start, or BLS vintage, the entire workbook recalculates correctly.
 
 **Sheet 2: Cost Buildup.** One block per labor category. **Block spacing is 19 rows** (18 rows of content + 1 blank separator). First block starts at row 1; block N starts at row `1 + (N-1) * 19`. FBR is at `row(N) + 17` = `18 + (N-1) * 19`. Implied multiplier at `row(N) + 18` = `19 + (N-1) * 19`.
+
+**All `$B$N` references below are literal Excel cell addresses with integer row numbers.** Copy them verbatim into workbook formulas. Each row number refers to a specific row in the Sheet 1 assumption block (see Step 8 Assumption cell layout).
+
+**The block-1 formulas shown below are templates for `block N` at `base_row = 1 + (N-1) * 19`.** For block 2 (starts at row 20), replace `B2` with `B21`, `B5` with `B24`, `B12` with `B31`, etc. Add `(N-1) * 19` to every in-block row index. Cross-sheet references to `IGCE Summary!$B$N` do NOT get shifted; they always point to the Summary assumption block. Worked example for block 2:
+
+- Row 21: `B=[annual median from BLS]` (was row 2 for block 1)
+- Row 24: `B==B23*B22` (was `B==B5*B4` - wait that's wrong; re-derive cleanly)
+
+Cleaner: think of it as `formula relative to base_row`. Block 1 base = 0; block 2 base = 19; block 3 base = 38. Every `B{n}` in the template becomes `B{n + base}`. Only in-block references shift; `IGCE Summary!$B$N` cross-sheet refs stay fixed.
 
 Per-block layout (first block, rows 1-19):
 
@@ -548,13 +677,21 @@ Cross-sheet references from Sheet 1 point to the FBR row: `='Cost Buildup'!$B$X`
 **Sheet 4: Rate Validation.** BLS burdened rate (mid scenario) vs. CALC+ P25/P50/P75, min/max range, divergence percentage (formula), Status column. Use the calibrated flag thresholds from Step 4:
 
 ```
-=IF(divergence_pct>0.40,"Above P50 +40% - requires justification",
+=IF(divergence_pct>0.70,"Above P50 +70% - requires specific justification",
   IF(divergence_pct<-0.25,"Below P25 - review under-pricing",
-    IF(divergence_pct>0.15,"FFP premium within expected 15-40% band",
-      "Competitive")))
+    IF(divergence_pct>0.40,"Metro geographic premium - document in methodology",
+      IF(divergence_pct>0.15,"FFP risk premium - within expected 15-40% band",
+        "Competitive"))))
 ```
 
-**Sheet 5: Travel Detail.** Formula-driven per destination block. If no travel is required, Sheet 5 contains a single "Travel - Not Applicable" declaration and note:
+**Sheet 5: Travel Detail.** Formula-driven per-destination block. For M destinations, block N starts at row `1 + (N-1) * 17` with a 16-row content layout and 1-row separator. In-block row indices shift by `(N-1) * 17` the same way Sheet 2 blocks shift by 19. Sheet 1 Summary travel rows sum across all destination blocks:
+
+```
+Annual travel (Sheet 1) = SUM across destinations of (block_N_row_14 * block_N_row_12 * block_N_row_13)
+                        = SUM('Travel Detail'!$B$14, 'Travel Detail'!$B$31, 'Travel Detail'!$B$48, ...)
+```
+
+If no travel is required, Sheet 5 contains a single "Travel - Not Applicable" declaration and note:
 
 ```
 Row 1: "Travel Detail: Not Applicable"
@@ -581,7 +718,11 @@ Row 14: A="Annual Travel Cost"    B==B11*B12*B13                  (formula, bold
 
 **Day-trip branch required.** Without the `IF(B7=0,...)` branches on rows 8 and 10, a day trip (Nights=0) produces 150% M&IE instead of the correct 75% single-partial-day per FTR 301-11.101. This is a silent wrong-answer bug at the workbook level; do not skip the IF branches even if all planned trips are overnight.
 
-**Sheet 6: Methodology.** FFP-specific narrative for the contract file. Include:
+**Sheet 6: Methodology.** FFP-specific narrative for the contract file.
+
+**Formula-reference rule (mandatory).** Any derived numeric figure in the Methodology prose (implied multiplier, aging factor, months gap, fully burdened rate, total hours) MUST be a cell reference, not a hardcoded string. Use `=TEXT(Sheet1!B12,"0.0000")` for the aging factor, `=TEXT('Cost Buildup'!$B$19,"0.00""x""")` for implied multiplier, etc. If you hardcode "1.0615" or "2.47x" as text and the user later changes B6 (escalation) or B10 (contract start) or any wrap rate cell, the Methodology goes silently stale while the workbook numbers update. This is a workbook-consistency trap; no exceptions.
+
+Include:
 - Wrap rate buildup with each cost pool explained
 - FAR 15.404-1(a), 15.404-4, 16.202 citations
 - Implied multiplier basis (note: 2.93x at defaults, within 2.2-3.5x sanity band for commercial-item CONUS)
@@ -599,7 +740,7 @@ Row 14: A="Annual Travel Cost"    B==B11*B12*B13                  (formula, bold
 - Exclusions (airfare TBD, ODCs TBD, subs not included, OCONUS not covered)
 - NAICS/PSC if provided
 
-**Sheet 7: Raw Data.** All API query parameters and responses: BLS series IDs (full 25-char), CALC+ keywords and exact-match buckets with record counts, per diem query details, City Pair fares if retrieved.
+**Sheet 7: Raw Data.** All MCP tool call parameters and responses. If the MCP does not surface the full 25-char BLS series ID in its response, record the series-ID equivalent: MSA code + SOC + datatypes queried + `year` parameter. A reviewer should be able to reproduce the BLS query from what is recorded. Also record: CALC+ keywords and exact-match buckets with record counts, per diem city/state/FY/month parameters, and City Pair fares if retrieved.
 
 **Sheet 1 Summary column presentation:**
 
@@ -619,25 +760,58 @@ When base year is partial, prorate: `=burdened_rate*$B$7*(B8/12)*headcount`. Tra
 
 Never output as .md or HTML unless explicitly requested.
 
+### Step 8.5: Post-Build Sanity Check (Required)
+
+Before presenting, run a dimensional sanity check on the grand total:
+
+```
+expected_total ≈ avg_FBR × total_productive_hours × total_FTE_count
+```
+
+Where `total_productive_hours` = Sheet 1 B7 × Sheet 1 B8 / 12 for partial-year periods (full year just uses B7). Multiply by number of periods (Base + OYs) for Structure A.
+
+If the workbook grand total is more than **2x** different from the expected band, the most likely cause is the **row 4 vs row 5 DL reference trap**: Summary formulas referencing `Cost Buildup!$B$4` (Aged Annual Wage, ~$100K+) instead of `Cost Buildup!$B$5` (Hourly DL rate, ~$50) produce totals in the billions because hours × annual wage is dimensionally wrong. Fix the cross-sheet reference and re-recalc.
+
+Also spot-check: open the file with `openpyxl.load_workbook(path, data_only=True)` and read the grand total cell. If it comes back as `None`, the recalc step didn't run.
+
+**Environment-specific recalc handling:**
+- **claude.ai web chat:** rerun `python /mnt/skills/public/xlsx/scripts/recalc.py <file>`.
+- **Claude Code CLI (no LibreOffice):** the recalc script is unavailable. Instead, compute the expected grand total in Python against the raw inputs and wrap rates:
+
+```python
+expected = sum(
+    fbr * hours * fte * scenario_months / 12
+    for lcat in lcats
+    for fbr, hours, fte in [(lcat.fbr_mid, productive_hours, lcat.fte)]
+)
+```
+
+Verify the computed total lands within 1% of your Python-side expected total. If yes, dimensional correctness is confirmed; Excel/Numbers will recalculate cell formulas on open. If no, the row 4 vs row 5 DL reference trap or block-indexing shift is likely the cause.
+
+- **macOS Claude Desktop with Numbers installed:** Numbers auto-recalculates on file open; no script needed. Numbers may show a brief "updating formulas" indicator.
+
 ### Step 9: Present the File
 
-**Required final step. Do NOT skip.**
+**Required final step. Do NOT skip.** The delivery path depends on the runtime environment:
 
-After recalc verification, copy the workbook to `/mnt/user-data/outputs/` and call `present_files` to surface the deliverable to the user:
-
+**claude.ai web chat:**
 ```python
 import shutil
 shutil.copy(workbook_path, "/mnt/user-data/outputs/")
 # Then call present_files with the filename
 ```
 
-The skill is not complete until the file is delivered. Do not rely on the user asking "where's the file?" - push the deliverable explicitly.
+**Claude Code CLI (or any non-sandboxed host):** write the workbook to the user's working directory (or an explicit path the user provided) and surface the absolute path in chat. On macOS also run `open <path>`; on Linux `xdg-open <path>`; on Windows `start "" <path>`. Do NOT try to write to `/mnt/user-data/outputs/` - the path does not exist outside claude.ai.
+
+**Recalc script availability is also environment-specific.** The `python /mnt/skills/public/xlsx/scripts/recalc.py <file>` script exists on claude.ai; on Claude Code CLI, either skip recalc (Excel recalculates on open) or use `openpyxl`'s formula parser and write the computed values back if recalc-on-save matters for the consumer.
+
+The skill is not complete until the file is delivered. Do not rely on the user asking "where's the file?" - push the deliverable explicitly with the absolute path.
 
 ## Edge Cases
 
 **Labor categories not in BLS:** Find closest SOC code(s), query all candidates, present range, let user select, document mapping rationale.
 
-**No CALC+ results:** Try broader keywords, then `suggest-contains` on the parent term. If still nothing, note CALC+ unavailable; estimate relies on BLS alone. Mark Status as "No CALC+ data." Do NOT use keyword= as a last resort without documenting the contamination caveat.
+**No CALC+ results:** Broaden the `suggest_contains` term or try a parent category. If still nothing, note CALC+ unavailable; estimate relies on BLS alone. Mark Status as "No CALC+ data." Do NOT silently fall through to keyword_search without documenting the contamination caveat.
 
 **BLS wage at reporting cap:** Use $239,200/$115.00 as lower bound. Flag in narrative that burdened rate is a conservative floor. For high-wage metros where P75 or P90 is capped, use P75 as the defensible upper anchor; cross-reference commercial surveys (Levels.fyi, Radford) for senior-level positioning.
 
@@ -647,14 +821,10 @@ The skill is not complete until the file is delivered. Do not rely on the user a
 
 **Implied multiplier sanity check:** If the MID-scenario implied multiplier falls outside 2.2x-3.5x, flag for user review. Below 2.2x suggests unrealistically low overhead assumptions. Above 3.5x suggests SCIF/OCONUS/niche conditions that should be documented. The high-scenario naturally exceeds 3.5x - do NOT flag it.
 
-**Silent-wrong-answer traps:**
-- `q=` parameter on CALC+ returns the full 265K-record corpus silently. Always use `keyword=` or `search=`.
-- `wage_stats` read from top level returns None. Always read from `aggregations.wage_stats`.
-- CALC+ discovery buckets live at `aggregations.labor_category.buckets`, each with `key` and `doc_count`. NOT `aggregations.results` or `aggregations.suggestions`.
-- MSA code renumbering (Cleveland 17460 → 17410, Dayton 19380 → 19430) returns NO_DATA silently. Verify code if all datatypes return empty.
-- BLS SOC with trailing zeros (151212 vs 15121200) fails the 25-char assertion AFTER you've already constructed several queries. Use exactly 6-char SOC.
-- **Text starting with `=`, `+`, `-`, or `@` in ANY cell** is parsed as a formula by Excel. This applies to Methodology prose, labels, and source citations - not just Sheet 2 annotations. Prefix with a space or lead with a non-operator character.
+**Silent-wrong-answer traps (workbook-level):**
+- **Text starting with `=`, `+`, `-`, or `@` in ANY cell** is parsed as a formula by Excel. This applies to Methodology prose, labels, and source citations, not just Sheet 2 annotations. Prefix with a space or lead with a non-operator character.
 - **Cross-sheet row index off-by-one on the DL hourly reference.** Row 4 of each Cost Buildup block is Aged Annual Wage; row 5 is Direct Labor Rate (Hourly). Scenario formulas and rate validation formulas that reference the DL hourly rate must use `5 + (i-1)*19`, NOT `4 + (i-1)*19`. Indexing off row 4 produces workbook totals in the billions because annual wage × hours is dimensionally wrong.
+- **Day-trip M&IE.** Sheet 5 per-destination block needs the `IF(B7=0,...)` branches on rows 8 and 10. Without them, a 0-night day trip produces 150% M&IE instead of the correct 75% single partial day per FTR 301-11.101.
 
 ## What This Skill Does NOT Cover
 
@@ -692,7 +862,7 @@ Claude will: use Option C (separate lines per location) without prompting, pull 
 Claude will: apply custom rates as MID scenario (not as a variant), set low = mid minus 20% offset, high = mid plus 20% offset, note cleared environment justification in methodology.
 
 **24x7 coverage:** "SOC analyst coverage 24x7x365, Cleveland, base plus 2 OYs"
-Claude will: compute 4.2 FTE single-seat per Step 0.5, pull BLS Cleveland (0017410 post-2023 OMB renumbering), build workbook.
+Claude will: compute 4.2 FTE single-seat per Step 0.5, pull BLS Cleveland via the MCP (current MSA code), build workbook.
 
 **FFP by deliverable:** "18-month feasibility study, 4 milestones at 15/30/25/30 scope weight, Oak Ridge TN"
 Claude will: ask whether uniform / per-LCAT matrix / staffing-profile allocation, age wages once to contract start (no mid-contract escalation on single-period PoP), produce by-deliverable workbook with Summary columns = CLINs.

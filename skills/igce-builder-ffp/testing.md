@@ -4,9 +4,13 @@
 
 ## The bottom line
 
-Three waves of independent testing across April 2026 (15 end-to-end runs on Claude Opus 4.7 and Claude Sonnet 4.6, 210 binary assertions graded) show the IGCE Builder FFP skill reliably produces auditable Firm-Fixed-Price cost estimates across four distinct federal acquisition scenarios. Wave 1 surfaced 17 cross-run quality issues, all patched. Wave 2 validated the patches. Wave 3 re-tested post-Round 4 substrate patches, surfaced three burden-band gaps, shipped Round 5 + Round 6 patches, and closed clean at 42/42.
+Four waves of independent testing across April 2026 (18 end-to-end runs on Claude Opus 4.7 and Claude Sonnet 4.6, 210 binary assertions graded plus three MCP-era qualitative rounds) show the IGCE Builder FFP skill reliably produces auditable Firm-Fixed-Price cost estimates across seven distinct federal acquisition scenarios.
 
-**Wave 1: 55/56 = 98% (Opus) with Sonnet parity. Wave 2: 56/56 = 100% (Opus) after 17 substrate patches. Wave 3: 42/42 = 100% (Opus) after Round 5 + Round 6 patches.**
+- **Wave 1** (claude.ai, pre-patch): 55/56 = 98% on Opus with Sonnet parity. Surfaced 17 cross-run quality issues.
+- **Wave 2** (claude.ai, post-patch): 56/56 = 100% on Opus after 17 substrate patches.
+- **Wave 3** (claude.ai, post-Round 5/6): 42/42 = 100% on Opus after burden-band recalibration and 6 additional patches.
+- **Wave 4** (Claude Code CLI, post-MCP migration): three rounds on Opus 4.7 against the reduced skill orchestrating 3 MCP servers directly (bls-oews, gsa-calc, gsa-perdiem). 3 workbooks produced, 18 additional skill issues identified and patched. Zero workbook build failures, zero silent-wrong-answer bugs.
+- **Wave 5** (Claude Code CLI, ai-boundaries + untested workflow paths): three rounds on Opus 4.7 covering Workflow A+ SOW decomposition (S4), multi-location explicit headcount (S5), and Workflow B rate validation (S6). Surfaced a Tier-1 ai-boundaries violation (Workflow B originating fair-and-reasonable determinations), the DoD installation → GSA per diem crosswalk gap, 22 additional skill issues. All patched.
 
 ## Scenarios tested and how reliably they work
 
@@ -217,6 +221,201 @@ None block current ship state.
 8. Adapt FFP workflow patterns into IGCE Builder CR and IGCE Builder LH/T&M skills (already done for 17 cross-cutting patches; Round 5/6 additions not yet ported).
 9. SOW decomposition Workflow A+ structured edit gate (add LCAT / rename LCAT / remove LCAT / split) before Step 1.
 10. Sheet 2 block size constant cell for future-proofing if block row count changes.
+
+## Wave 4: Post-MCP Migration (Claude Code CLI, Opus 4.7)
+
+### Context
+
+Between Wave 3 and Wave 4, the skill substrate was migrated from three Python L1 skills (bls-oews-api, gsa-calc-ceilingrates, gsa-perdiem-rates calling public APIs) to three dedicated MCP servers (bls-oews, gsa-calc, gsa-perdiem). The MCPs absorb API-key handling, URL construction, series ID assembly, MSA renumbering lookups, JSON path parsing, and the 75% first/last day M&IE rule.
+
+The FFP skill was reduced from 702 to 649 lines at migration by stripping defensive text that the MCPs now obviate (CALC+ `q=` vs `keyword=` trap, `aggregations.wage_stats` JSON-path archaeology, 25-char BLS series ID assembly, manual 75% M&IE math). Wave 4 tested the reduced skill against the same substrate-free scenarios.
+
+All three rounds ran in Claude Code CLI on Claude Desktop, against the local `~/.claude/skills/igce-builder-ffp/SKILL.md`. An earlier attempt on Claude Desktop chat surfaced a 4-minute hang on the bls-oews MCP's `detect_latest_year` probe; the same probe returned in milliseconds from Claude Code on the same machine, localizing the bug to Claude Desktop's MCP client rather than the server. All 8 federal MCPs were verified healthy from Claude Code.
+
+### Methodology
+
+Each round ran a single scenario in a fresh Claude Code conversation. The worker built the workbook end-to-end. An independent Opus 4.7 grader (separate Claude Code session) then reviewed the produced workbook, read the SKILL.md, and reported findings covering both skill defects and execution gaps. Fixes were applied to SKILL.md between rounds.
+
+Scenarios were chosen to escalate from baseline to judgment-heavy:
+- **R1:** S1 DC dev team FFP-by-period (3 FTE, GSA MAS commercial, base + 2 OY, no travel)
+- **R2:** S2 Cleveland 24x7 SOC (single-seat shift coverage, Agency BPA cleared, base + 2 OY, quarterly DC travel)
+- **R3:** S3 Oak Ridge DOE 18-month feasibility study (6 LCATs, FFP-by-deliverable 15/30/25/30, DoE M&O, no travel)
+
+### Round 1 findings (S1 DC dev team, GSA MAS commercial)
+
+Workbook built cleanly. Mid total ~$3.10M, implied multiplier 2.47x, zero formula errors. Six skill issues surfaced:
+
+1. **BLS datatype list stale.** Skill requested `[04, 11, 12, 13, 14, 15, 02, 05]`. MCP rejected `02` and `05` (employment and wage RSE). Valid set is `01, 03, 04, 08, 11, 12, 13, 14, 15`.
+2. **Step 9 claude.ai-specific.** Hardcoded `/mnt/user-data/outputs/` and `present_files` neither of which exist on Claude Code CLI.
+3. **Rate validation >40% threshold over-triggers.** Skill's narrative said 15-40% typical for DC/high-cost metros, but the formula flagged anything above 40% as "requires justification." DC Software Developer mid FBR landed at 57% above CALC+ P50 and got flagged despite the skill's own calibration note.
+4. **No default for "N-person team" without seniority tiers.** Skill documented junior/mid/senior percentile conventions but silent on how to price a generic "3-person team."
+5. **Preset vs generic wrap-rate table hierarchy ambiguous.** Generic Low/Mid/High table showed Mid = 32/80/12/10 = 2.93x, which matches DoD non-cleared preset, not the GSA MAS commercial preset (2.47x). Worker could read either as authoritative.
+6. **Platform-level: evaluator reported `$Bword` substitution tokens** in the Sheet 2 block layout ("$Bdevelopment", "$Byears", "$Bteam"). Grep of source file returned zero matches. Not in skill; Claude Code skill-loader substitution artifact OR evaluator hallucination.
+
+**Fixes shipped:** corrected datatype list, environment-aware Step 9 with CLI fallback, rate band recalibration (0-15 / 15-40 / 40-70 / >70 with explicit DC/metro premium band), N-person P50 default, relabeled generic table as "sensitivity reference only," simplified block-layout guardrail to remove confusing example tokens.
+
+### Round 2 findings (S2 Cleveland 24x7 SOC, Agency BPA cleared + travel)
+
+Workbook built cleanly. Mid 3-year total ~$4.24M. Seven skill issues surfaced:
+
+1. **Five wrong multipliers in Vehicle Preset table.** Stated vs actual: GSA MAS cleared 2.59→**2.87**, Agency BPA non-cleared 2.53→**2.85**, Agency BPA cleared 2.91→**3.17**, DoD SCIF 3.67→**3.64**, R&D BAA CR 2.99→**3.03**. Worker caught the 3.17x Agency BPA cleared discrepancy during the build and documented the corrected multiplier in Methodology, but a less careful operator would have shipped the stated 2.91x.
+2. **Sanity bands excluded actual preset values.** The stated 2.8-3.0x band for Agency BPA cleared / DoD non-cleared excluded the true 3.17x Agency BPA cleared multiplier.
+3. **Shift-coverage travel ambiguous.** Step 0.5 derived 4.2 FTE for single-seat 24x7 but said nothing about how many travel per trip. Worker picked 1 (shift-lead rotation) and noted the assumption.
+4. **SOC 15-1212 InfoSec Analyst fragile at metro level.** Cleveland MSA 17410 suppressed for this SOC; worker fell back to Ohio state. Skill mentions generic metro→state→national fallback but doesn't flag InfoSec Analyst as a known-fragile SOC (common in most mid-size metros outside tech hubs).
+5. **CALC+ "SOC Analyst" query fragmented.** 33 records spread across 27 buckets, max bucket 2 records. Useful pool was "Information Security Analyst II" (31 records). Skill had no canonical-query hint for this common LCAT term.
+6. **FY2027 per diem fallback worked cleanly.** MCP returned empty rates array for FY2027; worker fell back to FY2026 per skill rule. No change needed; flagged as skill strength.
+7. **Platform-level:** evaluator again reported `$Banalyst`, `$BOYs`, `$Bcoverage` substitution tokens. Same non-issue as Round 1.
+
+**Fixes shipped:** corrected all 5 multipliers to match actual arithmetic, recalibrated sanity bands, added "1 representative per trip" default for shift-coverage travel, added known-fragile SOC note to Step 2, added canonical CALC+ query hints for fragmented LCATs ("SOC analyst" → Information Security Analyst I/II/III).
+
+### Round 3 findings (S3 Oak Ridge DOE 18-month feasibility, 6 LCATs, FFP-by-deliverable)
+
+Workbook built cleanly. Mid total ~$2.94M, DoE M&O multiplier 3.18x confirmed. Seven skill issues surfaced:
+
+1. **B8 "Base Year Months" doesn't fit single-period PoPs.** Worker renamed to "Period Months" = 18 and adjusted hours formula. Skill silent on this pattern.
+2. **No-travel Sheet 1 row not explicit.** Skill says build Sheet 5 as "Not Applicable" but said nothing about the Summary. Worker added $0 Travel row on Sheet 1 with "TBD" note.
+3. **Sanity band not pinned to preset row.** DoE M&O 3.18x was within its band but worker had to cross-reference two separate tables (preset + band) to confirm.
+4. **Methodology formula-ref rule too narrow.** Rule only explicitly applied to aging factor. Worker hardcoded "1.0615" and "2.47x" as text strings in narrative; those go stale if user edits B6 or B10.
+5. **No post-build sanity check.** Row 4 vs row 5 DL hourly reference trap remains a silent $B-dimension bug; skill listed it as a silent-wrong-answer trap but no mandatory validation step.
+6. **Nuclear Engineer distribution compressed at Knoxville.** P25 = P10 = $93,980 (ORNL/Y-12 concentration crushes the lower half). Skill cap decision tree covered P75 caps but not P25=P10 compression.
+7. **Platform-level:** third consecutive round reporting substitution tokens (`$Bfeasibility`, `$Bscope`). Source file clean on grep. Locked in as a platform-layer artifact.
+
+**Fixes shipped:** relabeled B8 as "Base Year Months (or PoP Months)" with inline rename guidance, explicit Sheet 1 no-travel row instruction, pinned Expected band column to each Preset table row, mandatory Methodology formula-ref rule at top of Sheet 6 spec, new Step 8.5 post-build sanity check with dimensional `avg_FBR × hours × FTE` guardrail, extended cap decision tree with compressed-distribution branch.
+
+### Wave 4 aggregate
+
+| Metric | Value |
+|---|---|
+| Rounds | 3 |
+| Workbooks produced | 3 |
+| Workbooks that opened without #VALUE! errors | 3 |
+| Workbooks with implied multiplier matching vehicle preset | 3 |
+| Silent-wrong-answer bugs observed | 0 |
+| Skill defects identified by evaluator | 18 |
+| Skill defects fixed between rounds | 18 |
+| Platform-layer substitution reports (not skill bugs) | 3 |
+| Line delta: SKILL.md post-Wave-3 (702) → post-Wave-4-fixes | 689 |
+
+### Platform-level finding (not actionable in the skill)
+
+Three consecutive rounds reported `$B<prompt-word>` substitution tokens in the Step 8 Sheet 2 block layout (e.g., `$Bdevelopment`, `$Byears`, `$Banalyst`, `$BOYs`, `$Bfeasibility`, `$Bscope`). Grep of the SKILL.md source returned zero matches each time; the file contains literal integer cell addresses (`$B$2`, `$B$12`, etc.). Two plausible root causes:
+
+- **Claude Code skill-loader substitution:** the loader may apply a template-style substitution on `$VAR`-shaped tokens in the skill markdown before handing it to the model.
+- **Evaluator model hallucination:** the evaluator reads the cell addresses correctly but, when describing the substitution failure mode warned about in the guardrail, confabulates examples that match the pattern.
+
+Either way, the skill cannot fix this at the source. Mitigation: removed example tokens from the guardrail to reduce the evaluator's priming surface. Root-causing requires instrumenting the skill loader, which is out of scope for Wave 4.
+
+### What has not been tested in Wave 4
+
+- **Workflow A+ SOW/PWS decomposition gate.** Raw SOW text input, Step 0 validation gate, user confirmation before Steps 1+.
+- **Multi-location with explicit headcount.** Option C separate-lines path; two metros with defined FTE splits and inter-site travel.
+- **Workflow B rate validation only.** `mcp__gsa-calc__price_reasonableness_check` shortcut, dual-pool analysis, no workbook.
+- **Cap stress at multi-capped metros.** LANL/SF/NYC where P90 and P75 both cap for specialty occupations.
+- **Custom wrap rate workflow.** CO provides explicit rates (cleared/SCIF); worker applies as MID, generates LOW/HIGH offsets.
+- **Partial base year.** Mid-year award start with 9-month base period.
+- **Sonnet 4.6 parity on Wave 4 fixes.** All three rounds were Opus 4.7.
+
+These are queued for Wave 5.
+
+### Fixes shipped cumulatively in Wave 4
+
+All 18 fixes ship together in the current `SKILL.md` at the head of this testing record. Chronological order (Round 1 → Round 3):
+
+1. BLS datatype list updated (dropped invalid 02/05)
+2. Step 9 environment-aware with Claude Code CLI fallback
+3. Rate validation bands recalibrated (0-15 / 15-40 / 40-70 / >70) with metro premium acknowledged
+4. N-person team no-tiers default (all at P50)
+5. Block-layout guardrail simplified
+6. Generic Low/Mid/High table relabeled "sensitivity reference"
+7. 5 Vehicle Preset multiplier arithmetic corrections
+8. Sanity bands pinned to each preset row (new column)
+9. Shift-coverage travel default (1 representative per trip)
+10. Known-fragile SOC note (15-1212 InfoSec Analyst, 15-2051 Data Scientist, 19-2012 Physicists)
+11. Canonical CALC+ query hints for fragmented LCATs
+12. B8 relabeled for single-period PoPs
+13. Sheet 1 no-travel row made explicit
+14. Methodology formula-reference rule promoted to mandatory top-of-section
+15. Step 8.5 post-build sanity check (dimensional guardrail)
+16. Cap decision tree extended for compressed P25=P10 distributions
+17. Vehicle preset "Notes" column reshaped for clarity
+18. "Sanity band is vehicle-aware" paragraph consolidated (info moved into preset table)
+
+## Wave 5: ai-boundaries + untested workflow paths (Claude Code CLI, Opus 4.7)
+
+### Context
+
+Wave 4 covered the three main Workflow A build paths (FFP-by-period single-location, shift coverage + travel, FFP-by-deliverable multi-LCAT). Wave 5 covered the remaining untested paths: Workflow A+ SOW decomposition gate (S4), multi-location with explicit headcount (S5), and Workflow B rate validation (S6). Wave 5 also applied the repository's ai-boundaries.md as a grading lens for the first time, which surfaced a Tier-1 violation in Workflow B.
+
+### Round 1 findings (S4 Fort Meade DoD BPA cybersecurity PWS, Workflow A+)
+
+Workbook built ~$21.4M mid total. Worker paused at the Step 0 validation gate and used `AskUserQuestion` before building - partial pass on the gate (see below). Seven findings:
+
+1. **Step 0 validation gate conflates decomposition with build parameters.** Worker presented the decomposition table and then immediately asked parameter questions (wrap preset, shift coverage, metro) in the same AskUserQuestion call. User rubber-stamped the decomposition by answering parameter questions; no explicit decomposition approval. **Fix: separate Stage A (decomposition OK?) from Stage B (parameters).**
+2. **Missing preset: DoD BPA + SCIF stack.** Presets force either-or between Agency BPA cleared (3.17x) and DoD SCIF (3.64x); a BPA operating inside a SCIF (common at Fort Meade / NSA) doesn't fit either cleanly. **Fix: added DoD BPA (TS/SCI SCIF) row at 32/115/13/10 → 3.39x with 3.2-3.6x band.**
+3. **Per-block Sheet 2 formulas block-1-indexed.** Step 8 shows `B==B5*B7`, `B==B12+B14` as if every block were block 1 (row 1). Block 2 starts at row 20; a builder copying formulas verbatim into block 2 references block 1 cells. **Fix: explicit `base_row = 1 + (N-1) * 19` with worked example for block 2 formula shifts.**
+4. **Stacked-premium worked example missing.** CALC+ divergence bands (15-40, 40-70, >70) don't explain how stacked factors produce large percentages. Worker's InfoSec FBR landed 100-140% above national CALC+ P50 because metro × P75 × aging × SCIF/commercial wrap ratio all stacked. **Fix: Step 4 now includes a worked decomposition table (metro × seniority × aging × wrap-ratio = expected ratio).**
+5. **Tier 1 vs Tier 2 distinction in Step 0.5.** Skill treats "24x7 Tier 2" identically to "24x7 SOC." In practice Tier 2 is often an on-call overlay on Tier 1 (2-3 FTE) rather than a 4.2 FTE layer. **Fix: added clarifying question trigger via AskUserQuestion when PWS says "Tier 2" specifically.**
+6. **TS/SCI compliance overhead not flagged.** NIST 800-53 continuous monitoring, STIG remediation, accreditation maintenance run 5-10% of staff time on cleared contracts. Not in BLS wages. **Fix: added optional 5-10% buffer option with user-confirmation gate.**
+7. **Minor ai-boundaries observation.** Worker described rate divergence as "Defensible but will draw reviewer questions" - model-originated "defensible" conclusion. **Fix: rolled into the Tier-1 ai-boundaries scrub.**
+
+Platform-layer: evaluator reported `$BFFP`, `$BIGCE`, `$Bpriced` substitution tokens. Source file clean on grep. Fourth consecutive round. Locked in as Claude Code skill-loader substitution artifact.
+
+### Round 2 findings (S5 Fort Meade + Colorado Springs multi-location, Workflow A)
+
+Workbook built cleanly. ~$9.0M mid 3-year total. Worker correctly used Option C (separate lines per location) without prompting, handled FY2027 per diem fallback cleanly, ran Python-side dimensional sanity check (no LibreOffice). Six findings:
+
+1. **DoD installation → GSA per diem city crosswalk gap.** "Fort Meade" returned empty; GSA keys it under Annapolis / Anne Arundel County. Single most common friction point for DoD users. **Fix: added crosswalk table to Step 5 covering 15 high-traffic installations (Fort Meade, Belvoir, Pentagon, Liberty, Peterson, Wright-Pat, Eglin, NSA Bethesda, etc.).**
+2. **"Travel between sites" ambiguity.** "Quarterly travel between sites" with 2+ destinations could mean 4 total or 4 each way. Worker defaulted to total-split-evenly and flagged. **Fix: canonical rule added: trips/year TOTAL split evenly unless user says "each way" explicitly.**
+3. **Per diem FY fallback trigger mismatch.** Skill said "fallback if MCP returns empty array"; MCP actually returns an explicit error string for unpublished FYs. **Fix: fallback now triggers on both empty array OR error containing "No rates found for FY{year}".**
+4. **Multi-destination Sheet 5 layout parameterization missing.** Step 8 Sheet 5 shows one per-destination block; for M destinations builders invent the block-2 starting row. **Fix: added `block N at row 1 + (N-1) * 17` parameterization and cross-sheet SUM formula template.**
+5. **CLI recalc fallback gap.** Step 8.5 and Step 9 assumed `/mnt/skills/public/xlsx/scripts/recalc.py` exists. Not available on Claude Code CLI without LibreOffice. Worker used parallel Python computation against raw inputs. **Fix: Step 8.5 now explicitly handles three environments (claude.ai web, Claude Code CLI, macOS Numbers).**
+6. **Methodology formula-ref rule underweighted.** Rule buried mid-Step 8. Worker violated it by hardcoding "3.2525x" as string. **Fix: rule promoted to mandatory callout at top of Sheet 6 spec in Wave 4; reinforced in Wave 5 with concrete `=TEXT()` patterns.**
+
+Platform-layer: evaluator did not report substitution tokens this round (or did not emphasize). Pattern stays locked.
+
+### Round 3 findings (S6 Senior Data Scientist $225/hr DC Agency BPA, Workflow B) - ai-boundaries violation
+
+Worker produced a Price Reasonableness Determination memo and declared the rate "fair and reasonable" in Section 7. Under ai-boundaries.md grading, this is a **Tier-1 violation**:
+
+1. **Model-originated "fair and reasonable" conclusion.** Worker opened the chat response with "Yes, reasonable" and the memo Section 7 asserted "determined to be fair and reasonable in accordance with FAR 15.404-1(b)(2)(i) and (v)." The CO's determination was written by the model. ai-boundaries.md Rule 2: "If the signer cannot defend every evaluative claim in the final record without pointing back at the tool's output, the tool crossed the line."
+2. **Invented TS/SCI clearance premium.** 15-25% premium applied in memo Section 5 as a market fact. Worker's own evaluator notes acknowledged: "It's not in the skill. Agents supply it from general knowledge." Model-originated rationale treated as data.
+3. **Advisory text in chat.** "I'd push back only if the vendor can't articulate the clearance value..." - model telling the CO how to negotiate.
+
+**Fixes shipped:**
+- **Workflow B rewrite.** From "Position each rate: below 25th (aggressive), 25th-75th (competitive), above 75th (premium), above 90th (outlier requiring justification)" to "Pull data and describe positioning neutrally; do NOT assert fair/reasonable/defensible." Calibration band labels for Sheet 4 Status column rewritten as positional: "Within CALC+ FFP premium range" / "Metro geographic premium; see Methodology for factor decomposition" / "CO review recommended for factors outside BLS/CALC+ data."
+- **Memo drafting gate.** Skill now drafts a price reasonableness memo ONLY when the CO supplies the rationale and conclusion in the prompt; memo template leaves Determination section as `[CO to complete]` placeholder unless the CO supplied it. Skill responds to naked "draft the memo" requests with: "Provide the rationale you want documented and your fair-and-reasonable conclusion; I'll format it."
+- **Out-of-data premiums named as gaps.** TS/SCI premium, OCONUS hazard, SCIF overhead, specialty labor market: if not in BLS/CALC+/Per Diem data, skill flags the gap. No model-originated premium ranges.
+- **ai-boundaries citation.** New "Operating Principle (ai-boundaries)" section at the top of the skill names the rule explicitly with examples of what the skill does and does not do.
+- **Evaluative-verb scrub.** "Defensible," "reasonable," "acceptable," "competitive," "outlier" removed from narrative-generation paths (Methodology sheet prose, chat summary, validation sheet status).
+
+### Wave 5 aggregate
+
+| Metric | Value |
+|---|---|
+| Rounds | 3 |
+| Workbooks / documents produced | 2 workbooks + 1 memo |
+| Tier-1 ai-boundaries violations identified | 1 (S6) |
+| Skill defects identified total | 22 |
+| Skill defects fixed | 22 |
+| Platform-layer substitution reports | 4th confirmation (S4); S5/S6 did not emphasize |
+
+### Pre-flight MCP check added
+
+Separate from findings, a new pre-flight block was added at the top of the skill to verify the three MCPs (bls-oews, gsa-calc, gsa-perdiem) are available and their API keys are configured before any workflow executes. Missing MCP: stop, tell the user which MCPs are missing, ask them to install and configure. Missing API key: stop, tell the user which key is missing. The skill does not attempt to work around missing MCPs by calling APIs directly.
+
+### Platform-level finding (cemented)
+
+Four consecutive rounds across Waves 4 and 5 have reported `$B<prompt-word>` substitution tokens in the Step 8 block layout (examples: `$Bdevelopment`, `$Byears`, `$Banalyst`, `$BOYs`, `$Bfeasibility`, `$Bscope`, `$BFFP`, `$BIGCE`, `$Bpriced`, `$Bper`, `$Bof`). Every token maps to a word from the session's user prompt. Grep of SKILL.md source returns zero matches every time. Root cause is in the Claude Code skill-loader substitution pipeline OR a consistent evaluator hallucination pattern keyed off the block-layout template. Not fixable in the skill. Mitigation in place: example-token-bearing guardrail text was removed; literal `$B$2` / `$B$12` notation retained.
+
+### What has not been tested
+
+- **Custom wrap rate workflow.** CO provides explicit rates (cleared/SCIF/OCONUS); worker applies as MID, generates LOW/HIGH offsets. The skill has the rule; no test run has exercised it.
+- **Cap stress at multi-capped metros.** LANL / SF / NYC where P90 AND P75 both cap for specialty occupations; tests the Step 2 cap decision tree including the compressed-distribution branch.
+- **Partial base year proration.** Mid-year award with 7-9 month base period (e.g., March start against Sep 30 FY end).
+- **Memo drafting with CO-supplied rationale.** Wave 5 surfaced the need for the memo gate; the gate itself is untested.
+- **Sonnet 4.6 parity across Waves 4 and 5.** All runs were Opus 4.7.
+
+These are queued for Wave 6.
 
 ## Independent grading methodology
 
