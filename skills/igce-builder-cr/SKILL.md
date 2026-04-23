@@ -163,6 +163,8 @@ Ask for everything in a single pass. Provide defaults where noted. If any Requir
 | Fringe rate | 32% | FICA + health + retirement + PTO + workers' comp |
 | Overhead rate | 80% | Applied to labor + fringe |
 | G&A rate | 12% | Applied to subtotal |
+| FCCM rate | 0% | FAR 31.205-10 / CAS 414 Facilities Capital Cost of Money; applied to (Subtotal + G&A) as imputed cost. Default 0%. Populate only when CO supplies rate from contractor CASB Disclosure Statement Form CMF. |
+| CO-supplied DCAA rates | Defaults | **Override rule:** If the contracting officer supplies DCAA-audited indirect rates (from an approved Forward Pricing Rate Agreement or a current disclosure statement review), USE THOSE RATES instead of the 32/80/12 defaults. Document the source in Methodology Section 4 ("Cost Pool Basis: CO-supplied DCAA rates per FPRA dated [date]"). Do not revert to defaults when CO-audited rates are available; audited rates are the stronger basis. |
 | Fee percentage (CPFF) | 8% | Fixed fee as % of estimated cost |
 | Base fee (CPAF) | 3% | Minimum fee regardless of performance |
 | Award fee pool (CPAF) | 7% | Max additional fee based on evaluation |
@@ -192,16 +194,23 @@ Provide this when the user is unsure:
 | Fringe | 25% | 32% | 40% | Higher for generous benefits, union shops |
 | Overhead | 60% | 80% | 120% | Higher for SCIF/cleared, large firms, R&D labs |
 | G&A | 8% | 12% | 18% | Higher for large corporate structures |
+| FCCM | 0% | 0% | 0.5% | FAR 31.205-10 / CAS 414; most small and mid firms don't book it. Populate only with CO-supplied rate. Layered after G&A, applied to (Subtotal + G&A). |
 
 ### Fee Structure Reference
 
 | Type | FAR Ref | Mechanism | Default | When Used |
 |------|---------|-----------|---------|-----------|
-| CPFF | 16.306 | Fixed fee set at award, unchanged by actual costs | 8% | Most common CR. R&D, studies, analysis. |
+| CPFF | 16.306 | Fixed fee set at award, unchanged by actual costs | 8% | Most common CR. R&D, studies, analysis. **Must select form: Completion (d)(1) or Term (d)(2).** |
 | CPAF | 16.305 | Base fee (0-3%) plus award pool (5-10%) earned on performance | 3% base + 7% pool | Performance-driven with periodic evaluation |
 | CPIF | 16.304 | Target fee adjusted by share ratio; bounded by min/max | 8% target, 80/20 share | Complex work with cost uncertainty but measurable efficiency |
 
-**Statutory fee caps:** R&D contracts: 15% of estimated cost (10 USC 3322(a)). Non-R&D: no statutory cap but 10% is the practical ceiling per agency policy.
+**Statutory fee caps:** R&D contracts: 15% of estimated cost (10 USC 3322(a)). Non-R&D: no statutory cap but 10% is the practical ceiling per agency policy. BAA R&D awards typically settle in the 6-10% band; statutory caps are ceilings, not targets.
+
+**CPFF Completion Form vs Term Form (FAR 16.306(d)(1) and (d)(2)).** Every CPFF IGCE must declare the form. The two are materially different contract structures:
+- **Completion Form (16.306(d)(1)):** scope defined by a definite goal or end product. Contractor must complete and deliver the specified end product before the full fixed fee is earned. Use for CPFF where the deliverable is bounded: a report, a prototype, a validated analytical model, a concluded investigation.
+- **Term Form (16.306(d)(2)):** scope described in general terms; contractor obligated to devote a specified level of effort over a stated PoP. Fee is earned across the LOE period regardless of technical outcome. Use for CPFF R&D where technical success is uncertain (BAAs, exploratory research, advisory services, studies without a predetermined end state).
+
+Record the form selection in the Stage B parameter collection and print it explicitly in Sheet 6 Methodology. For R&D with uncertain outcome, Term Form is the default. Never cite "FAR 16.306" alone without the (d)(1) or (d)(2) subparagraph.
 
 ## Constants Reference
 
@@ -240,7 +249,7 @@ Converts an unstructured SOW/PWS into structured pricing inputs.
 
    **Stage A - Decomposition validation.** After presenting the decomposition table, ask the user to confirm or amend it. Use `AskUserQuestion` with options like "Decomposition looks right, proceed" / "Modify LCAT X" / "Add LCAT Y" / "Adjust FTE estimates." Response MUST END after this question. Wait for explicit confirmation before continuing.
 
-   **Stage B - Build parameters.** Only after the decomposition is confirmed, ask the remaining parameter questions in a separate `AskUserQuestion` call: fee type ("Cost-reimbursement contracts require a fee structure. Based on [rationale], I recommend CPFF. Should I proceed with CPFF, or do you need CPAF or CPIF?"), cost pool rates, metro confirmation, contract start, NAICS/PSC, shift coverage density if 24x7. Response MUST END after this question.
+   **Stage B - Build parameters.** Only after the decomposition is confirmed, ask the remaining parameter questions in a separate `AskUserQuestion` call: fee type ("Cost-reimbursement contracts require a fee structure. Based on [rationale], I recommend CPFF. Should I proceed with CPFF, or do you need CPAF or CPIF?"), **if CPFF selected, also ask Completion Form (FAR 16.306(d)(1)) vs Term Form (FAR 16.306(d)(2))** with a decision heuristic: "Is the scope defined by a completable deliverable (end item, final report concluding a specific investigation) or by a level of effort over time (research program, exploratory R&D, advisory services)?" For R&D with uncertain outcome, Term Form is the default. Then: cost pool rates (note whether user has CO-supplied DCAA rates), FCCM rate if applicable, metro confirmation, contract start, NAICS/PSC, shift coverage density if 24x7, and any pass-through ODCs that should NOT bear fee (software licenses, GFE-equivalent hardware). Response MUST END after this question.
 
    DO NOT self-approve either stage. DO NOT skip Stage A to go straight to parameters. Proceeding to Step 1+ before Stage B is also answered is a skill violation. The user must affirmatively validate BOTH the decomposition and the parameters before build work begins.
 
@@ -387,10 +396,24 @@ Build the estimated cost layer by layer for each labor category:
 4. Overhead             = Labor_Fringe * overhead_rate
 5. Subtotal             = Labor_Fringe + Overhead
 6. G&A                  = Subtotal * ga_rate
-7. Total Estimated Cost = Subtotal + G&A
-8. Fee                  = see fee calculation by type below
-9. Total Estimated Price = Total_Estimated_Cost + Fee
+7. FCCM (optional)      = (Subtotal + G&A) * fccm_rate      # FAR 31.205-10, CAS 414; default 0%
+8. Total Estimated Cost = Subtotal + G&A + FCCM
 ```
+
+**Fee-Bearing Cost vs Non-Fee Cost (CRITICAL for CR fee math).** Fee on cost-reimbursement contracts applies only to cost elements the contractor is executing with their own staff and management. Pass-through ODCs (software licenses, third-party hardware reimbursed at cost, GFE-equivalent material, travel at government rates) typically do NOT bear fee:
+
+```
+Fee-Bearing Cost = Labor + Fringe + Overhead + G&A + FCCM + Travel    # contractor execution
+Non-Fee Cost     = Pass-through ODCs, licenses, hardware at cost
+Total Estimated Cost = Fee-Bearing Cost + Non-Fee Cost
+
+Fee                    = Fee-Bearing Cost * fee_rate    # NOT Total Cost * fee_rate
+Total Estimated Price  = Total Estimated Cost + Fee
+```
+
+Applying fee to Total Estimated Cost including pass-through ODCs silently over-fees the contract. Sheet 1 Summary MUST label the two cost pools separately and compute fee only on Fee-Bearing. If the user intends an ODC to bear fee (contractor-developed deliverable, for example), they can move it to the Fee-Bearing block explicitly with a methodology note.
+
+**Fee calculation by type below.** Replace `total_estimated_cost` with `fee_bearing_cost` in every fee formula.
 
 **CPFF fee:**
 ```
@@ -785,7 +808,7 @@ Include as placeholder rows or methodology notes:
 - **Ground transportation:** Rental cars, mileage ($0.70/mile), taxi, rideshare
 - **ODCs:** Equipment, licenses, materials (user must provide; placeholders as numeric 0)
 - **Subcontractor costs:** Requires separate estimate or vendor input
-- **DCAA audit rates:** Actual indirect rates from contractor disclosure statements
+- **DCAA proposal audits:** This skill does not perform the audit; it uses CO-supplied audited rates when provided. See "CO-supplied DCAA rates" in Optional Inputs for the override rule.
 - **OCONUS travel:** Per diem covers CONUS only; State Dept rates for OCONUS
 - **FFP contracts:** Use IGCE Builder FFP
 - **T&M/LH contracts:** Use IGCE Builder LH/T&M
