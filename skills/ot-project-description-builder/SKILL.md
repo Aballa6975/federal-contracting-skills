@@ -74,7 +74,7 @@ If the user is unsure, default to Prototype -- it covers the widest range of OT 
 | Traditional (sole, no NDC/SB participation) | Must have cost-sharing arrangement per 4022(d)(1)(C) | Cost share required (typically 1/3 performer) |
 | Traditional (with follow-on competition commitment) | Competitive follow-on satisfies 4022(d)(1)(D) | No cost share required but must compete production |
 
-An NDC is defined at 10 USC 3014: an entity that has not had a contract or subcontract of $500K+ in the prior year, or is a nonprofit performing DoD-relevant research, or any other entity the contracting officer determines as nontraditional. The performer type determines whether cost-sharing is required and shapes the project description's cost-sharing section.
+An NDC is defined at 10 USC 3014: an entity that is not currently performing, and has not performed for the prior one-year period, any DoD contract or subcontract subject to full Cost Accounting Standards (CAS) coverage under 41 USC 1502. The test is CAS full-coverage status, not a dollar threshold on contracts. Nonprofits performing DoD-relevant research and any other entity the contracting officer determines as nontraditional also qualify. The performer type determines whether cost-sharing is required and shapes the project description's cost-sharing section. Do NOT cite a dollar-value rule (e.g., "$500K+ in prior year"). That is not the statutory test and will cause mis-determinations.
 
 ### Intake Question 3: TRL Entry and Exit
 
@@ -123,9 +123,17 @@ When the user provides an existing document (SOW, SOO, BAA white paper, proposal
 
 **SOW conversion note:** If converting from a traditional SOW, flag that OTs do not use task/subtask CLIN structure, FAR clause references, or performance-based language (those are FAR constructs). The conversion maps task areas to TRL phases and deliverables to milestone completion criteria.
 
+**Cost data stripping (Workflow B).** If the source document contains cost figures (CLIN values, total contract value, labor rates, phase dollar amounts), do NOT preserve them in the project description body or any section of the .docx. Pass them to the Milestone Handoff Table as an informational reference line labeled "Source-doc cost references (informational only, do not anchor should-cost estimate)" so the OT Cost Analysis has calibration context without treating them as should-cost anchors.
+
+**Cost-share arithmetic question (Workflow B + path (C) only).** If the source document states a total contract value and the performer type triggers 10 USC 4022(d)(1)(C) cost-sharing, ask the user whether the stated total represents (a) the government share with performer contributing additional funds on top, or (b) the total agreement value with performer share carved out of the stated figure. Do not default. The two interpretations produce materially different government obligations (roughly 50% delta at the standard 1/3 share).
+
 ## Phase 1: Scope Decision Tree
 
 Ask questions in this sequence. Each decision narrows scope and implies milestones. Present as structured choices, not open-ended questions. Collect in a single pass where possible.
+
+**Phase 1 execution:** On platforms that expose a structured multi-choice prompt tool (claude.ai web chat provides AskUserQuestion), use it for Acquisition Context Intake and Blocks 1-6. Batch 3-4 related questions per prompt block. Reserve prose for genuinely open-ended answers (technical approach, system names, performer details). Every multi-choice question must include an "Other" / "Something else" free-text escape.
+
+**Anti-redundancy:** Before asking any framing or scope question, check whether the user's initial prompt already answers it. Do not re-ask explicit answers; confirm silently and proceed.
 
 ### Block 1: Prototype Objective and Technical Baseline
 
@@ -211,13 +219,30 @@ Phase | Milestone | Description                     | TRL In/Out | Est. Duration
 
 **User validation gate.** The user confirms, adjusts, or overrides any milestone. If they override, document the rationale.
 
+**Go/no-go gate carry-through.** Every phase-boundary milestone in the derived table must have a measurable go/no-go criterion carried from Block 2 Q7. The criterion must appear in (1) Section 4 Technical Approach by Phase as the phase exit criterion and (2) Section 5 Milestone Schedule as the completion criterion on that milestone. Do not leave go/no-go criteria sitting in Phase 1 intake only.
+
 ## Phase 2: Document Assembly
 
-Generate the project description using the docx skill. Read `/mnt/skills/public/docx/SKILL.md` before generating output.
+### Phase 2 Invocation Gate
+
+Before invoking the docx skill for document generation, present a Phase 1 Decision Summary in chat. The summary must include:
+- The four framing answers (OT type, performer type, TRL entry/exit, consortium/direct)
+- All derived defaults with one-line rationale for each
+- The phase structure and milestone count
+
+Wait for the user to reply "proceed" (or correct any item) before generating the .docx. Do this even when the user has waived interactive Phase 1. It provides a catch point before a large document generation locks in framing errors and preserves progress if the session is interrupted.
+
+**DO NOT self-approve.** Presenting the Decision Summary and then immediately continuing to docx generation in the same response (e.g., emitting "Proceeding to document assembly now" or similar without waiting for user input) defeats the entire purpose of the gate. The user must have an opportunity to read the summary, catch a wrong default, and redirect before the .docx is built. After presenting the Decision Summary, the response must END. Wait for the next user message containing "proceed" (or a correction) before invoking the docx skill. This applies even when the user's original prompt was richly specified. The intake defaults applied in Phase 1 are your inferences; the user is entitled to review them before commitment.
+
+Generate the project description using the docx skill. If `/mnt/skills/public/docx/SKILL.md` is available (claude.ai sandbox), read it first and use that generator. Otherwise (Claude Code, local installs), use the python-docx library directly to produce the .docx. Do not abort because the sandbox path is missing.
 
 ### Project Description Section Structure
 
-This is NOT a FAR Section L/M format. OT project descriptions follow the structure below:
+This is NOT a FAR Section L/M format. OT project descriptions follow the structure below.
+
+**Section ordering is prescriptive.** The sections below appear in the document in the exact order shown. Do not merge, combine, swap, or rename them. If a conditional section is omitted (Section 12 Cost-Sharing when no cost share applies; Section 13 Production Follow-On when not in scope), renumber subsequent sections sequentially but preserve the relative order of all remaining sections.
+
+**Cross-references in body text must use section titles, not section numbers.** Write "the Production Follow-On section" or "the Data Rights section," not "Section 12" or "Section 7." This prevents broken references when conditional sections are omitted and downstream sections are renumbered.
 
 **Section 1: Agreement Overview**
 - 1.1 Purpose: one paragraph stating the prototype objective
@@ -303,6 +328,7 @@ This is NOT a FAR Section L/M format. OT project descriptions follow the structu
 - Schedule constraints (event-driven milestones, dependency on external programs)
 - Assumptions about government-furnished resources, access, or participation
 - Any user overrides from Phase 1 validation with rationale
+- **Performance placeholder closeout.** When performance thresholds are unspecified at scope-setting time (range, payload, endurance, accuracy, etc.), use [TBD] placeholders in the Prototype Objectives section. Every [TBD] in the document must have a stated disposition mechanism here. Default disposition: "Bilateral modification at Phase 1 CDR milestone to replace placeholders with measurable thresholds, based on preliminary design trade study results." Do not leave [TBD] without a disposition.
 
 ### Language Rules
 
@@ -322,7 +348,11 @@ This is NOT a FAR Section L/M format. OT project descriptions follow the structu
 
 ## Phase 3: Validation and Handoff
 
+**UNCONDITIONAL RULE:** At the end of every run, present the Milestone Handoff Table as a markdown block in chat. Required, not optional, regardless of whether the user mentions the OT Cost Analysis skill. Do not skip or self-edit based on judgment that the user "won't need it."
+
 ### Document Review Checklist
+
+**Required emission.** After the .docx is saved to disk and before presenting the Milestone Handoff Table, emit the Document Review Checklist in chat as a checkbox list showing which items pass and which need attention. The user must see the checklist state. Running it mentally and moving on defeats the point; the user has no way to catch a miss otherwise.
 
 Before presenting the final document, verify:
 
@@ -341,6 +371,8 @@ Before presenting the final document, verify:
 ### Milestone Handoff Table (CHAT OUTPUT ONLY -- NEVER IN THE DOCUMENT)
 
 **After the .docx is saved to disk, present the milestone handoff table as chat output only.** It is NOT a section of the project description. It is NOT saved as a separate file. It exists solely as a markdown table in the conversation so (a) the user can review the milestone structure for cost analysis readiness, and (b) the OT Cost Analysis skill can consume it as input.
+
+**Est. Duration column semantics.** "Est. Duration" means calendar months from completion of the prior milestone, or from phase start for the first milestone in each phase. It is NOT effort days, NOT internal labor hours, and NOT time from agreement award. The OT Cost Analysis uses this column for labor loading; ambiguous durations produce estimates that can differ by 3x or more.
 
 Present it like this, verbatim:
 
@@ -363,7 +395,7 @@ Total PoP: [X months]
 Milestone Payment Type: [Fixed / Cost-type / Mixed]
 ```
 
-Include rows for every milestone derived in Phase 1. After the table, tell the user in plain chat prose: *"This milestone table is ready for handoff to the OT Cost Analysis. Say 'build the OT cost analysis' and I'll estimate should-costs per milestone, apply cost sharing, produce the funding profile, and generate the price reasonableness memo citing 10 USC 4021."*
+Include rows for every milestone derived in Phase 1. After the table, tell the user in plain chat prose. The canned message has two variants depending on the cost-sharing path. When the performer type triggers 10 USC 4022(d)(1)(C) (traditional prime, no NDC/SB/competition path), use: *"This milestone table is ready for handoff to the OT Cost Analysis. Say 'build the OT cost analysis' and I'll estimate should-costs per milestone, apply the cost-sharing treatment, produce the funding profile, and generate the price reasonableness memo citing 10 USC 4021."* For all other paths (NDC, SB, competition-commitment) where no cost share applies, use: *"This milestone table is ready for handoff to the OT Cost Analysis. Say 'build the OT cost analysis' and I'll estimate should-costs per milestone, produce the funding profile, and generate the price reasonableness memo citing 10 USC 4021."* Do not emit the cost-sharing clause when no cost share applies; the downstream memo will be inconsistent with the performer type.
 
 **DO NOT, under any circumstances:**
 
