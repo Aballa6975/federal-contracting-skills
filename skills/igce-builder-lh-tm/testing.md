@@ -310,13 +310,55 @@ Wave 5 was a targeted wave driven by two objectives: (1) port horizontal finding
 - **Methodology source-citation for overridden defaults.** Patch 1 requires documenting FPRA effective date, approving authority, rate composition.
 - **Divergence between CO-supplied rate and vehicle-table band.** Patch 1 states: trust the CO-supplied rate and note the divergence in Methodology rather than reconciling to the table.
 
-### What was NOT regressed this wave (rate limit constraint)
+### Wave 5 completion (2 rate-limited tests retried once rate limits cleared)
 
-The customary regression step (4 cold agents validating patches hold against post-patch skill) could not run because the two outstanding cold tests (24x7 T&M, Workflow A+ SOW) hit Anthropic rate limits and the MCP servers (bls-oews, gsa-calc, gsa-perdiem) disconnected mid-wave. Both patches are conservative additions (Patch 1 is a new paragraph that augments the existing custom-burden rule; Patch 2 removes a silent-bypass path in the gate without changing downstream Steps 1-5 behavior). No existing tests were observed to regress, but full cold regression across CPFF / CPAF / CPIF-style variant coverage is deferred until Wave 6.
+After the initial 2 cold tests, Tests 2 (24x7 T&M shift coverage at DISA Fort Meade) and 3 (Workflow A+ SOW decomposition on USCIS ELIS modernization) were rate-limited by Anthropic. Retried approximately 2 hours later. Both completed cleanly. Summary of all 4 Wave 5 cold tests:
+
+| # | Scenario | Result on Wave 5 patches | New universal gaps surfaced |
+|---|---|---|---|
+| 1 | Lockheed NSA Fort Meade CPFF 2.68 FPRA | DCAA override patch validated; 2.68 used as point estimate with ±0.2 bookending labeled "sensitivity display only" | None |
+| 2 | DISA 24x7 SOC + $680K pass-through materials | Both patches correctly abstained (Workflow A, no FPRA); 4.2 FTE single-seat 24x7 math cascaded cleanly through T&M block layout; materials at cost separated from burdened labor | **Gate 3 cell reference bug (see Patch 3 below)** |
+| 3 | USCIS ELIS modernization, raw SOW Workflow A+ | Both patches correctly abstained; Stage A/B gate held; 7 LCATs / 15 FTE decomposition defensible; $13.9M 3-yr mid total | Offset convention ambiguity (same as Test 2, different manifestation) |
+| 4 | Senior Red Team $285/hr DC Workflow B | Workflow B gate fired unconditionally on "reasonable"; Option A produced cleanly with no evaluative verbs | None |
+
+### Patch 3: Gate 3 cell reference correctness fix (Wave 5 completion)
+
+Tests 2 and 3 both surfaced confusion around the Sheet 2 block-offset convention. Test 2 went further and identified a concrete silent-wrong-answer bug: the Sheet 2 block layout (line 648-658) and the Step 8.5 Gate 3 cell reference (line 781) were inconsistent.
+
+- **Block layout** said `+7: Burdened Mid` (row 7 for block 1 under the natural "+N = N-th row of block" convention).
+- **Gate 3** said `row +9 = Burdened Mid at B9`.
+
+Under either possible interpretation of "+N", Gate 3 was reading the wrong cell: B9 is either a blank separator row (under "+N = Nth row") or Burdened High (under "+N = block_start + N"). Any worker running Gate 3 verbatim was either getting a false-fail (sheet 1 burden of 2.2 vs sheet 2 blank == divergence) or, worse, silently comparing Sheet 1 Mid to Sheet 2 High.
+
+**Fix:**
+1. Block layout now shows explicit row numbers for block 1 in parentheses next to each offset (row 1 header, row 7 Burdened Mid, etc.). The offset convention is called out explicitly: `+K` is the K-th row of the block where `+1` is block_start itself.
+2. Gate 3 cell reference corrected from `B9` to `B7`, with a note calling out that prior versions referenced the blank separator row as a silent-wrong-answer bug.
+3. Per-block formula added: for block N, the Burdened Mid cell is `B{7 + (N-1)*15}`.
+
+Verified inert on FFP and CR: FFP doesn't have an equivalent Gate 3 cell-compare pattern; CR's block layout uses a different convention (`+K = block_start + K`) that is internally consistent with its concrete row examples (rows 2-19 for block 1 with +1 = BLS Base at row 2). No port needed.
+
+### Wave 5 universal-only discipline: other observations skipped
+
+Tests 2 and 3 also surfaced:
+
+- **Period row offsets assume 4 periods (+10 to +13).** When PoP is 3 years, +13 is blank. Cosmetic. Skip.
+- **Scenario Range summary row placement unspecified** (Sheet 1 vs Sheet 2, top vs bottom). Worker improvised successfully in both tests. Consistency issue, not correctness. Skip.
+- **FTE annotation row +9 undefined** (would overlap with blank separator under the corrected convention). Cosmetic. Skip.
+- **Cross-LCAT Low/High aggregation cells (I2/I3) undocumented.** Worker improvised. Consistency issue, not correctness. Skip.
+- **Materials vs ODC placeholder band co-location.** T&M has real materials and placeholder ODCs on the same sheet; skill doesn't prescribe their visual separation. Minor. Skip.
+
+All five were considered and deliberately dropped per the universal-only + "patch correctness bugs, not documentation polish" discipline. The Gate 3 bug was the only one that rose to the bar.
 
 ### Wave 5 line delta
 
-SKILL.md: 832 → 855 lines (+23). Ceiling remains 1,000.
+SKILL.md: 832 → 859 lines (+27 across all 3 Wave 5 patches: DCAA override +~10, Workflow B gate unconditional fire +~5, Gate 3 correctness fix +~12). Ceiling remains 1,000.
+
+### Wave 5 regression summary
+
+- **4 of 4 cold tests completed** (2 initial + 2 retried after rate-limit reset)
+- **3 universal patches shipped:** DCAA/FPRA override rule, Workflow B gate unconditional fire, Gate 3 cell reference correctness fix
+- **Zero patch misfires observed** across all 4 scenarios
+- **Zero new universal gaps** beyond the one addressed by Patch 3
 
 ---
 

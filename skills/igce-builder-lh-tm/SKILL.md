@@ -645,17 +645,21 @@ $B$11 = Aging Factor                 (multiplies ALL raw BLS wages)
 
 **Sheet 2: Scenario Analysis.** Three side-by-side tables (low/mid/high burden). Burden multiplier cells in blue font. Blocks are 15 rows each per LCAT (13 content + 2 separator).
 
-**Block layout formula:** `row(N) = 1 + (N-1) * 15` where N is the LCAT index. Within each block (offsets from block top):
-- +1: LCAT header (merged)
-- +2: "Measure" | "Value" | blank | "Period" | Low | Mid | High
-- +3: BLS Base Annual Wage (raw BLS pull, hardcoded)
-- +4: Aged Annual Wage (= Row+3 * $B$11 aging factor)
-- +5: Direct Labor Rate Hourly (= Row+4 / 2080)
-- +6: Burdened Low (= hourly × $B$2)
-- +7: Burdened Mid (= hourly × $B$3)
-- +8: Burdened High (= hourly × $B$4)
-- +10 through +13: period rows (Base, OY1, OY2, OY3) × three burden columns
-- +14: Total row (SUM of +10 through +13)
+**Block layout formula:** `row(N) = 1 + (N-1) * 15` where N is the LCAT index. Block 1 starts at row 1; block 2 at row 16. Each block is 15 rows (13 content + 2 separator).
+
+**Offset convention (READ CAREFULLY — silent-wrong-answer trap).** `+K` means the K-th row of the block where `+1` is block_start itself (the LCAT header row), NOT one row below block_start. For block 1 (block_start=1), `+K = row K`. For block 2 (block_start=16), `+K = row 15 + K`. Concrete row numbers for block 1 are shown in parentheses below to disambiguate:
+- +1 (row 1): LCAT header (merged)
+- +2 (row 2): "Measure" | "Value" | blank | "Period" | Low | Mid | High
+- +3 (row 3): BLS Base Annual Wage (raw BLS pull, hardcoded)
+- +4 (row 4): Aged Annual Wage (= Row+3 * $B$11 aging factor)
+- +5 (row 5): Direct Labor Rate Hourly (= Row+4 / 2080)
+- +6 (row 6): Burdened Low (= hourly × $B$2)
+- +7 (row 7): Burdened Mid (= hourly × $B$3)
+- +8 (row 8): Burdened High (= hourly × $B$4)
+- +9 (row 9): blank separator (1st of 2 separators per block)
+- +10 through +13 (rows 10-13): period rows (Base, OY1, OY2, OY3) × three burden columns
+- +14 (row 14): Total row (SUM of +10 through +13)
+- +15 (row 15): trailing separator (2nd of 2 separators per block)
 
 The Aged Annual Wage gets its own row so the aging math is visible on the sheet; a reviewer can see BLS Base and Aged side by side. Sheet 2 blocks compute hourly rates. Sheet 1 Summary multiplies by productive hours × FTE × period duration for annual figures. Formula: `Sheet 1 annual = 'Scenario Analysis'!burdened_mid * $B$6 * FTE * ($B$7/12)`.
 
@@ -778,7 +782,7 @@ assert 100_000 <= per_fte <= 1_000_000, f"Per-FTE ${per_fte:,.0f} outside defens
 
 **Gate 2: Sheet 1 Grand Total == Sheet 2 Mid-Scenario Grand Total** within $0.01. Divergence = sheets pulling from different assumption cells.
 
-**Gate 3: Burden multiplier cell on Sheet 2 equals `$B$3` on Sheet 1.** Block 1 mid-burden display is at `B9` on Sheet 2 (row +9 = Burdened Mid per block offset), NOT `B6` (Burdened Low). Compare `wb["Scenario Analysis"]["B9"].value` to `wb["IGCE Summary"]["B3"].value` within 0.001.
+**Gate 3: Burden multiplier cell on Sheet 2 equals `$B$3` on Sheet 1.** Block 1 Burdened Mid is at **`B7`** on Sheet 2 (offset `+7` per the block layout — see offset convention above; row 7 for block 1). For block N, the cell is `B{7 + (N-1)*15}`. Compare `wb["Scenario Analysis"]["B7"].value` to `wb["IGCE Summary"]["B3"].value` within 0.001. (Prior versions of this skill referenced `B9` here, which is the blank separator row — a silent-wrong-answer bug.)
 
 **Environment-specific recalc handling:**
 - **claude.ai web chat:** rerun `python /mnt/skills/public/xlsx/scripts/recalc.py <file>`.
