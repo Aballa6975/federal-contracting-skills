@@ -227,6 +227,20 @@ Skill version lines: 426 before Wave 2 patches, 450 after. Ceiling remains 1,000
 
 These patches are shipped in the current skill but have not yet been validated against a fresh test wave. Wave 3 will regression-test the same six scenarios against the patched skill to confirm the Wave 2 failure modes no longer reproduce.
 
+### Post-Wave 2 bloat trim (5 cuts, no rules removed)
+
+Following a discipline pass on April 23, 2026, five pieces of non-load-bearing prose were removed from the skill without altering any behavioral rule. Every rule that was enforced before the trim is still enforced.
+
+| Cut | Section | What was removed |
+|---|---|---|
+| Section-ordering trailing anecdote | Phase 2 Section Structure | "Workers have been observed placing QASP at Section 11 and Transition at Section 12..." — testing history narrated as a rule. The preceding prescriptive sentence already covers it. |
+| Forbidden-appendix bullet enumeration | Phase 2 Appendices | Six specific forbidden appendix titles condensed into one inline example list. Universal rule is "no staffing-related appendix"; exhaustive enumeration was bloat. |
+| Staffing Handoff "Why this rule exists" paragraph | Phase 3 Staffing Handoff | Self-referential history about prior skill versions compressed to two sentences. The rule above is the rule; the why just needs to support judgment. |
+| CLIN Handoff DO NOT block duplication | Phase 3 CLIN Handoff | The DO NOT list repeated the staffing handoff pattern verbatim. Replaced with "Same DO NOT rules apply as for the Staffing Handoff above" plus a one-line variant summary. |
+| "Experienced 1102s flag this immediately" filler | Phase 3 CLIN Handoff | Rhetorical filler with no rule content. |
+
+Skill version lines: 450 before trim, 437 after. Ceiling remains 1,000.
+
 ## What was not tested
 
 - **Special Access Program and Special Access Required variants.** Classified coverage was limited to collateral Secret, Top Secret, and TS/SCI contexts in notional scenarios.

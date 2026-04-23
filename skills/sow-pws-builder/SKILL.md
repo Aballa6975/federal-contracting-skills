@@ -204,7 +204,7 @@ Generate the SOW or PWS using the docx skill. Read `/mnt/skills/public/docx/SKIL
 
 ### SOW/PWS Section Structure
 
-**Section ordering is prescriptive.** The sections below appear in the document in the exact order shown. Do not merge, combine, swap, or rename them. In particular: Section 11 is Reporting and Oversight, Section 12 is QASP Summary, Section 13 is Transition, Section 14 is Constraints and Assumptions. If a contract-type-specific section is omitted (Section 5 is T&M/LH only), renumber subsequent sections sequentially but preserve the relative order of all remaining sections. Workers have been observed placing QASP at Section 11 and Transition at Section 12, or collapsing Reporting and Oversight into another section. Do not do this.
+**Section ordering is prescriptive.** The sections below appear in the document in the exact order shown. Do not merge, combine, swap, or rename them. In particular: Section 11 is Reporting and Oversight, Section 12 is QASP Summary, Section 13 is Transition, Section 14 is Constraints and Assumptions. If a contract-type-specific section is omitted (Section 5 is T&M/LH only), renumber subsequent sections sequentially but preserve the relative order of all remaining sections.
 
 **Section 1: Introduction**
 - 1.1 Purpose
@@ -312,16 +312,7 @@ Do NOT put CPARS ratings, CPARS thresholds, or the words "Satisfactory / Excepti
 - C: System Interface Specifications
 - D: Acronym List
 
-**The appendix set above is the only authorized appendix set for the SOW/PWS.** Include only those appendices that are applicable to the requirement; omit those that are not. **DO NOT** create any appendix with the following titles or similar phrasing, under any circumstances:
-
-- "Appendix A: Implied Staffing Table"
-- "Appendix A: Staffing Implications Table"
-- "Appendix A: Staffing Table"
-- "Appendix A: Labor Category Staffing"
-- "Appendix A: IGCE Handoff"
-- "Appendix A: FTE Allocation"
-
-**DO NOT** replace the default appendix set (A: Current Environment, B: Volume Data, C: System Interface Specifications, D: Acronym List) with a staffing-related appendix. **DO NOT** append a staffing table after Appendix D as a supplementary section. The staffing handoff is a SEPARATE chat-output artifact (see Phase 3) — it does not belong anywhere in this document. If the program office wants to see the staffing estimate before running the IGCE Builder, they can read it from the chat output; it does not need to be in the contract file deliverable.
+**The appendix set above is the only authorized appendix set for the SOW/PWS.** Include only those applicable; omit the rest. **DO NOT** create any staffing-related appendix under any title (variants seen in practice: "Implied Staffing Table," "IGCE Handoff," "FTE Allocation," "Labor Category Staffing"). The staffing handoff is a separate chat-output artifact (see Phase 3); it does not belong anywhere in this document, including as a supplement after Appendix D.
 
 ### Language Rules
 
@@ -388,7 +379,7 @@ After the table, tell the user in plain chat prose: *"This staffing table is rea
 - Include the phrases "ready for the IGCE Builder," "say 'build the IGCE'," "FFP skill," "IGCE development," or any skill-chain plumbing messaging anywhere in the SOW/PWS document.
 - Emit the table as anything other than a markdown code block or markdown table in the chat conversation.
 
-**Why this rule exists:** Prior versions of this skill allowed the staffing table to be embedded as Appendix A of the SOW/PWS with a "not prescriptive" disclaimer. This violated FAR 37.102(d) because offerors anchor on FTE counts when they appear in a requirement document, regardless of disclaimers. It also leaked skill-internal messaging ("say 'build the IGCE'") into contract file deliverables. The staffing data is still needed — it just belongs in chat output between the two skills, not in the document submitted to the contracting officer.
+**Why this rule exists:** Offerors anchor on FTE counts when they appear in a requirement document regardless of any "not prescriptive" disclaimer. That violates FAR 37.102(d). The data is still needed; it just belongs in chat output between skills, not in the contract file deliverable.
 
 **The one exception** is the T&M/LH Labor Category Ceiling Hours table in Section 5 per FAR 16.601(c)(2). That is a pricing mechanism (ceiling hours, no SOC codes, no FTE counts, no derivation basis) and is not the same thing as this staffing handoff table.
 
@@ -416,13 +407,9 @@ Build the rows from the CLIN structure preference captured in Block 5 question 1
 
 After the table, tell the user: *"This CLIN structure is a suggested starting point for Section B of the solicitation. It is not part of the SOW/PWS and should not be pasted into the document body. The contracting officer owns the final CLIN structure."*
 
-**DO NOT, under any circumstances:**
-- Write the CLIN table into the SOW/PWS document body, any section, or any appendix.
-- Save the CLIN table as a separate .docx, .xlsx, .csv, .md, or any other file format.
-- Label any part of the SOW/PWS as "CLIN Structure," "CLIN Table," "Contract Line Items," "Pricing Schedule," or any similar phrasing.
-- Emit the table as anything other than a markdown code block or markdown table in the chat conversation.
+**Same DO NOT rules apply as for the Staffing Handoff above:** never written into the SOW/PWS body or any appendix, never saved as a file, never relabeled as "CLIN Structure," "CLIN Table," "Pricing Schedule," or similar inside the document, and emitted only as a markdown table in chat.
 
-**Why this rule exists:** The PWS is Section C of the UCF (description of work). CLINs live in Section B (supplies/services and prices/costs). Including CLINs in the PWS body creates a conflict when the CO drops a real Section B on top, or reveals the document isn't actually a PWS but a mashed-up mini-contract. Experienced 1102s flag this immediately. The CLIN preference data is still useful for building Section B. It just belongs in chat handoff, not the contract file deliverable.
+**Why this rule exists:** The PWS is Section C of the UCF (description of work). CLINs live in Section B (supplies/services and prices/costs). Including CLINs in the PWS body creates a conflict when the CO drops a real Section B on top.
 
 ## Edge Cases
 
