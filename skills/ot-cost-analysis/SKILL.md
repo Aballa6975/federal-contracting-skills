@@ -44,6 +44,8 @@ If a key is missing, prompt the user to register: BLS at https://data.bls.gov/re
 User has a milestone table (from OT Project Description Builder or user-provided) and needs a complete should-cost estimate with cost-sharing and price reasonableness analysis. Execute Steps 1 through 9.
 Triggers: "build the OT cost analysis," "price this OT," "estimate costs for this prototype," "milestone cost estimate."
 
+**Pre-solicitation mode (Workflow A default when no performer price exists).** When the user has no proposed price yet, this is pre-solicitation should-cost, the most common first-pass use case. Run Workflow A but skip the variance/reasonableness comparison steps. The workbook becomes a government internal budget estimate. Set the Proposed Price column to blank (not "TBD" text; use an empty cell with conditional variance formulas `=IF(H[row]="","",H[row]-E[row])` so variance auto-populates when a price is later entered). State in methodology: "This is a pre-solicitation should-cost estimate; no performer price has been proposed. Variance formulas will activate when the Proposed Price column is populated." The Sheet 6 price reasonableness section becomes a "price reasonableness framework" rather than a determination.
+
 ### Workflow A+: From Concept (No Milestone Table)
 User has a prototype concept but no structured milestone table. Execute Step 0 (milestone decomposition) first, validate, then Steps 1-9.
 Triggers: "estimate costs for this prototype concept," "how much should this OT cost," or when the user provides a block of prototype description text rather than a milestone table.
@@ -94,7 +96,11 @@ Ask for everything in a single pass. Provide defaults where noted.
 
 ### Cost-Sharing Guidance
 
-Cost-sharing requirements depend on the 10 USC 4022(d) eligibility path:
+**Authority gate (check first).** 10 USC 4022(d) cost-sharing paths apply ONLY to prototype OTs issued under 10 USC 4022. They do NOT apply to:
+- **10 USC 4021 research OTs.** No statutory cost-share trigger. Government funds 100% of allowable cost. State in methodology: "This agreement is issued under 10 USC 4021 research authority; 10 USC 4022(d) cost-sharing paths are statutorily inapplicable."
+- **10 USC 4022(f) production follow-on OTs.** The follow-on inherits the path determination from the predecessor prototype agreement (e.g., if the prototype used path (D) competition commitment, the follow-on satisfies that path without re-triggering cost-share). Government funds 100% of production.
+
+For prototype OTs under 10 USC 4022, cost-sharing requirements depend on the 10 USC 4022(d) eligibility path:
 
 | Performer Type | Cost-Share Required? | Typical Arrangement |
 |---------------|---------------------|---------------------|
@@ -135,15 +141,29 @@ Converts an unstructured prototype concept into a milestone table suitable for c
 **Process:**
 1. **Sufficiency check.** Scan for: prototype objective, technology area, TRL indicators, schedule, deliverables, performer information. Flag anything missing. Hard stop if prototype objective is absent.
 
-2. **TRL mapping.** Identify current TRL and target TRL from the description. Map to phases using the TRL progression table from OT Project Description Builder.
+2. **Performer location gate.** Labor benchmarking is entirely location-driven. If the user has not stated a performer location (MSA, city/state, or "national"), ASK before proceeding. If the user says "unknown performer" or "location TBD," either pick one defensible default based on the scope (e.g., Huntsville for Army ground systems, Arlington for DC-area software, Dayton for AFRL-adjacent) AND FLAG THE CHOICE, or default to "national" scope and note that metro adjustment may change rates 15-30%. Do not silently infer.
 
-3. **Milestone derivation.** Apply the same heuristics as OT Project Description Builder Phase 1:
-   - TRL 3-4: PDR, detailed design
-   - TRL 4-5: build, component test, integration
-   - TRL 5-6: system test, relevant-environment demo
-   - TRL 6-7: operational demo, production readiness
+3. **TRL mapping (inline reference; do not depend on other skills being loaded):**
 
-4. **Present milestone table** for user validation:
+| TRL | Description | Typical phase |
+|-----|-------------|---------------|
+| 1-2 | Basic principles / concept formulated | Research OT (4021) |
+| 3 | Analytical and experimental proof of concept | Early prototype |
+| 4 | Component validation in lab | Prototype: design/build |
+| 5 | Component validation in relevant environment | Prototype: build/test |
+| 6 | System demo in relevant environment | Prototype: test/demo |
+| 7 | System prototype demo in operational environment | Late prototype / pre-production |
+| 8-9 | System complete and qualified / proven in operational use | Production (4022(f)) |
+
+4. **Milestone derivation (inline heuristic):**
+   - TRL 2 → 3: theoretical refinement, initial experimentation
+   - TRL 3 → 4: PDR, detailed design, benchtop validation
+   - TRL 4 → 5: prototype build, component test, subsystem integration
+   - TRL 5 → 6: system integration, relevant-environment demo
+   - TRL 6 → 7: operational-environment demo, production readiness review
+   - TRL 7 → 9: production (LRIP lots, first-article qual, full-rate production)
+
+5. **Present milestone table** for user validation:
 ```
 Milestone | Phase | Description                  | Est. Duration | TRL In/Out | Payment Type
 M1        | 1     | Preliminary Design Review    | 3 months      | 3/4        | Fixed
@@ -158,10 +178,10 @@ M3        | 3     | System Demonstration         | 3 months      | 5/6        | 
 Before costing, verify the milestone table is internally consistent:
 
 - TRL progression has no gaps (each milestone's exit TRL equals the next milestone's entry TRL or is within the same phase)
-- Total duration of milestones sums to within 10% of stated total PoP
+- Total duration of milestones sums to within 10% of stated total PoP (if not, apply the Step 6 duration-vs-PoP reconciliation rule)
 - Each milestone has at least one deliverable
-- Each milestone has a payment type (fixed or cost-type)
-- No single milestone exceeds 40% of total estimated value (too much risk concentration)
+- Each milestone has a payment type (fixed or cost-type) tagged in the Payment Type column
+- No single milestone exceeds 40% of total estimated value. If any does, recommend splitting into two milestones (one pre-gate, one post-gate). If the user declines the split, flag as intentional front-loading in methodology and require a written basis in the agreement file.
 
 Flag any issues for user resolution before proceeding.
 
@@ -169,15 +189,52 @@ Flag any issues for user resolution before proceeding.
 
 **Use the BLS OEWS API skill.** OT labor benchmarking serves a different purpose than FAR IGCE labor pricing. In a FAR IGCE, BLS wages are the basis for the government's cost estimate. In an OT cost analysis, BLS wages provide market context for evaluating whether the performer's proposed staffing costs are reasonable. The government is not setting rates; it is checking whether proposed rates are within market range.
 
-**Step 2a: Map labor categories to SOC codes.** Use the same SOC mapping table as the IGCE builders (see IGCE Builder LH/T&M Step 1 for the common mapping table). If the milestone table includes labor categories, map those. If not, infer from milestone scope:
+**Step 2a: Map labor categories to SOC codes.** Use the expanded mapping table below. If the milestone table includes labor categories, map those. If not, infer from milestone scope.
 
-| Milestone Type | Typical Labor |
-|---------------|---------------|
+**Common role to SOC mapping (inline reference; do not assume the IGCE Builder skills are loaded):**
+
+| Role family | SOC | Notes |
+|-------------|-----|-------|
+| Systems engineer | 17-2199 | Engineers, all other |
+| Software developer | 15-1252 | |
+| Software QA / test | 15-1253 | |
+| Mechanical engineer | 17-2141 | |
+| Electrical engineer | 17-2071 | |
+| Aerospace engineer | 17-2011 | |
+| Materials engineer | 17-2131 | |
+| Industrial engineer | 17-2112 | |
+| Electronics engineer | 17-2072 | |
+| Program manager | 13-1082 | |
+| Principal investigator (industrial) | 15-1221 or 15-2051 | Research scientist; use 15-2051 for data/ML-centric PI |
+| Autonomy / ML / RL engineer | 15-2051 | Data Scientist is the closest SOC proxy; document in methodology |
+| Robotics / mechatronics engineer | 17-2199 | Engineers, all other; no dedicated SOC |
+| Acoustics / sonar engineer | 17-2199 | Engineers, all other |
+| Cybersecurity engineer | 15-1212 | Information Security Analyst |
+| Manufacturing engineer (production OTs) | 17-2112 | Industrial Engineer |
+| Quality engineer (production OTs) | 17-2112 | Industrial Engineer (QA specialty) |
+| Production technician | 17-3029 | Engineering technicians, other |
+| Test engineer | 17-2199 or 17-3029 | Engineer vs technician level |
+| Logistics manager (production OTs) | 13-1081 | |
+| **Academic / FFRDC / UARC performers:** | | Use the academic branch below |
+| Senior research scientist (PI) | 19-1021 or 25-1032 | Biological/physical scientist, or postsecondary engineering teacher for university-affiliated PIs |
+| Postdoctoral researcher | 19-1099 | Life, physical, and social scientists, all other |
+| Graduate research assistant | Not a BLS SOC | University institutional rate applies (tuition remission + stipend); typically $55-75/hr loaded; do NOT derive from BLS 25-9044 teaching assistant wages, which understate actual billing rate |
+| Lab technician | 17-3023 | Electrical and electronics engineering technicians |
+
+For AI/autonomy/robotics roles not in BLS, document the proxy choice in methodology and note that defense-specialty premiums may push actual rates 20-30% above BLS medians (consider P75 as practical floor).
+
+**Milestone-type to labor inference (use when user provides only milestone descriptions):**
+
+| Milestone type | Typical labor |
+|----------------|---------------|
 | Design phase | Systems engineer, software architect, mechanical engineer |
-| Build/fabrication | Software developer, hardware engineer, technician |
-| Test | Test engineer, QA analyst, data analyst |
+| Build / fabrication | Software developer, hardware engineer, technician |
+| Component or lab test | Test engineer, QA analyst, data analyst |
 | Integration | Systems integrator, middleware engineer, DevOps |
+| Demonstration | Test engineer, systems engineer + travel team |
 | Project oversight | Program manager, principal investigator |
+| Production LRIP (4022(f)) | Manufacturing engineer, quality engineer, production technician, test engineer, logistics manager |
+| Research (4021) | PI, postdoc, grad RA, lab technician |
 
 **Step 2b: Pull BLS wages.** For each labor category, query BLS OEWS at the performance location. Use metro-level prefix (OEUM) when available. If the MSA returns no data (small metro suppression), fall back to state-level (OEUS), then national (OEUN). Document the fallback in the methodology: "BLS OEWS data for [MSA] was suppressed for [SOC codes]. [State/National] median used as benchmark." Use median (50th percentile) as the default benchmarking basis.
 
@@ -190,15 +247,32 @@ aged_wage = annual_median * aging_factor
 
 **Step 2d: Apply burden multiplier.** Convert to burdened rates for benchmarking:
 ```
-hourly_base = aged_wage / 2080
-burdened_rate = hourly_base * burden_multiplier
+hourly_base    = aged_wage / 2080        # paid hours: the denominator for deriving an hourly rate from an annual salary
+burdened_rate  = hourly_base * burden_multiplier
 ```
+
+**Paid hours (2080) vs. productive hours (1880) rule.** The 2080 figure in the rate derivation is the denominator for converting an annual salary to an hourly rate. It is NOT the effort hours per FTE. Effort hours per FTE-year are 1880 (2080 minus holidays and average leave). The 200-hour gap is absorbed in the burden multiplier (idle-paid overhead). Do NOT apply 1880 both as the rate denominator and the effort multiplier; that double-counts the leave/holiday burden.
+
+**Multi-location performers.** If prime and subcontractor (or multiple work sites) sit in different MSAs, pull BLS separately for each MSA and tag every labor row with its MSA in the workbook. Do NOT average MSA rates. Query each MSA through BLS, document the SOC and MSA used per role, and carry a "Location" column into Sheet 4 Labor Benchmarking and Sheet 2 Milestone Detail.
 
 **Important caveat for OTs:** Document in the methodology that BLS wages and burden multipliers are market benchmarks, not the pricing basis. OT performers -- especially NDCs -- may have cost structures that differ significantly from traditional defense contractors. A startup may have low overhead but high equity-based compensation. A university lab may have high fringe but no profit margin. The burden multiplier is a sanity-check tool, not an audit standard. OTs do not require DCAA-auditable indirect rates.
 
+**Academic / FFRDC / UARC / university-affiliated performer branch.** Research OTs under 4021 are frequently performed by universities, FFRDCs (MIT Lincoln Lab, MITRE, SEIs, national labs), and UARCs (APL, GTRI). Their cost structures differ from industrial defense contractors. When the performer is one of these:
+- **Burden scenarios shift.** Use 1.65 / 1.85 / 2.05 instead of 1.8 / 2.0 / 2.2 to reflect F&A (facilities and administrative) rate + fringe structure typical of on-campus research. Document as "academic/research-institute burden; see institutional NICRA if provided."
+- **Grad research assistants and postdocs** are priced at institutional billing rates, not BLS wages. Grad RAs typically load at $55-75/hr (stipend + tuition remission + fringe). Postdocs at $80-110/hr. Use the user-provided institutional rate if available; otherwise note the assumption and flag for validation.
+- **Institutional overhead vs. industrial wrap.** F&A is a federal negotiated rate (often 50-60% on-campus, 25-30% off-campus) applied to modified total direct costs. This is not the same as the industrial burden multiplier and should be documented as such in methodology.
+
+**Production follow-on (4022(f)) branch.** For production OTs under 4022(f), labor shifts from R&D/engineering to manufacturing, materials dominate, and the time horizon typically crosses multiple fiscal years.
+- **Labor mix** per the SOC table above: manufacturing engineer, quality engineer, production technician, test engineer, logistics manager. PI and research staff are absent.
+- **Unit economics matter.** Per-unit cost (total should-cost / unit count) and learning curve are load-bearing. Expect per-unit cost to drop across lots (typical 85-90% learning curve for hardware LRIP). Flag a flat per-unit cost across lots as unrealistic.
+- **FY obligation profile.** If PoP crosses more than one federal fiscal year (Oct 1 - Sep 30), Sheet 5 must include an FY-by-FY obligation table in addition to the cumulative profile. This is the document the PEM/budget officer consumes. **Default convention: obligate-at-start.** Map each milestone's START-date month to the FY it falls in and assign the full milestone government obligation to that FY. Rationale: cost-type milestones obligate at kickoff (funds committed when work begins), and fixed-price milestones are typically obligated at award or milestone kickoff under OT agreements, not at completion. Document the convention explicitly in methodology. If the user prefers obligate-at-completion, that can be stated as an override and the mapping recomputed; do not silently pick either convention.
+
+- **Learning curve for LRIP production.** For multi-lot production OTs (2+ lots of 6+ units each), apply a default learning-curve multiplier to the BOM line of each lot beyond Lot 1: `lot_BOM = base_BOM × 0.95^(lot_index - 1) × (1 + B9_materials_escalation)^(years_from_PoP_start)`. The 95% (Crawford model) is a conservative default; aerospace and electronics LRIP run 85-92%, simple assembly 95-98%. State the applied curve in methodology and flag if the performer's proposed price shows FLAT per-unit cost across lots (unrealistic) or INCREASING per-unit cost (escalation compounding without learning; signals either escalation is too high or learning is not being captured). Per-unit cost should decline across lots even after escalation.
+- **Path determination inherits from predecessor; cost-share ratio does NOT propagate.** Production follow-on under 4022(f) inherits the authorization basis from the prototype (e.g., if the prototype used path (D) competition commitment, the follow-on is authorized under that path). The follow-on itself does not re-trigger 4022(d) analysis. **However, the cost-share ratio does not carry over to production.** Production government obligation = 100% per the Authority Gate, regardless of what cost-share ratio applied to the predecessor prototype. If the prototype was path (C) with 1/3 performer share, the production follow-on still has $B$7 = 0. State this explicitly in methodology to avoid confusion: "Predecessor prototype used 10 USC 4022(d)(1)([X]) with [Y]% performer cost share. Production follow-on under 10 USC 4022(f) inherits the path determination but not the cost-share ratio; government funds 100% of production."
+
 ### Step 3: Cross-Reference Against CALC+
 
-**Use the GSA CALC+ Ceiling Rates API skill.** Same methodology as IGCE builders:
+**Use the GSA CALC+ Ceiling Rates API skill.** Same methodology as IGCE builders. Call the MCP with `page_size=1` (the MCP rejects `page_size=0`; you only need the aggregations block, not per-result rows). Read from `histogram_percentiles`, NOT `wage_percentiles`:
 
 ```python
 aggs = response_json["aggregations"]
@@ -207,9 +281,7 @@ p25      = aggs["histogram_percentiles"]["values"]["25.0"]
 p75      = aggs["histogram_percentiles"]["values"]["75.0"]
 ```
 
-**WARNING:** Do NOT read from `wage_percentiles` (empty when page_size=0). Always use `histogram_percentiles`.
-
-Compare BLS burdened rate to CALC+ median. Flag divergence >25%. Note in methodology: CALC+ reflects GSA MAS ceiling rates for traditional contractors; OT performers (especially NDCs) are not bound by GSA schedule pricing.
+Compare BLS burdened rate to CALC+ median. Flag divergence >25% in methodology with remediation: for NDC performers keep BLS as primary (CALC+ reflects GSA MAS ceilings that NDCs are not bound by); for traditional primes widen the burden scenario to capture the gap. Never silently adjust a rate. CALC+ empty results for a role (0 hits): try one broader keyword (e.g., "software" instead of "ML"); if still empty, mark "No CALC+ data, BLS only" in methodology and do not flag divergence for that role.
 
 ### Step 4: Materials and Hardware Estimation
 
@@ -239,6 +311,8 @@ Present the estimated materials breakdown for user validation. Mark as "estimate
 
 **Use the GSA Per Diem Rates API skill.** Same methodology as IGCE builders.
 
+**FY fallback rule.** GSA typically publishes each new FY's per diem rates in August of the preceding FY. If the OT's PoP starts in a fiscal year whose rates have not yet been published (MCP returns empty or error for target FY), fall back to the most recently published FY. Document the substitution explicitly in Sheet 6 methodology Section 7: "GSA per diem for FY[target] not yet published at analysis date; rates drawn from FY[fallback] and marked for refresh when new FY rates are released." Do not silently query the wrong year.
+
 OT travel is typically lighter than traditional contract travel but may include:
 - Technical interchange meetings (performer site to government site)
 - Test events (travel to government test ranges or facilities)
@@ -260,10 +334,26 @@ milestone_odcs = other direct costs allocated to that milestone
 milestone_should_cost = milestone_labor + milestone_materials + milestone_travel + milestone_odcs
 ```
 
-**Labor hours per milestone:** Estimate based on milestone scope, duration, and staffing:
+**Labor cost method: per-category is canonical.** Build labor cost per milestone by summing individual category lines, not by applying a single blended rate:
 ```
-milestone_labor_hours = productive_hours_per_year * (milestone_duration_months / 12) * FTEs_for_milestone
+# For each labor category present in the milestone:
+category_hours  = 1880 * (milestone_duration_months / 12) * FTE_for_category
+category_cost   = category_hours * burdened_rate_for_category
+
+milestone_labor = sum(category_cost) across all categories in that milestone
 ```
+
+A blended rate (weighted-average burdened rate across the staffing mix) is acceptable only as a quick pre-solicitation approximation when no milestone-level staffing detail exists, and it must be disclosed in methodology. For any real workbook, use the per-category method so users can adjust individual FTE allocations and see the dollar impact.
+
+**Labor cost cell formula (for the workbook).** Per-category labor cells must be Excel formulas so changes to burden multiplier, FTE, or duration cascade:
+```
+labor_cell = FTE * (Duration_months / 12) * Productive_Hours * Burdened_Rate_Ref
+```
+where Productive_Hours references the assumption cell ($B$6) and Burdened_Rate_Ref points to the Sheet 4 Labor Benchmarking row for that category. Sheet 4 holds burdened rates as the single source of truth; Sheet 2 references Sheet 4. Never hardcode a rate into a Sheet 2 labor cell.
+
+**Milestone duration vs. PoP reconciliation.** If milestone durations sum to a value more than 10% different from the stated total PoP: default to scaling labor to the PoP (continuous staffing model; labor FTE_months = PoP_months × peak_FTE × ramp_factor). Flag the gap in methodology and note that if the user intends the difference as unstaffed gaps, the workbook can be rebuilt with milestone-duration labor only (which produces a materially lower should-cost). Do not silently pick either interpretation; state the one applied.
+
+**Multi-performer structures (prime + subcontractor).** When a traditional prime carries an NDC subcontractor at significant participation (path (A) satisfied via sub), the workbook treats each performer as a labor block within each milestone. Sheet 2 per-milestone labor rows get a "Side" column tagging Prime vs. NDC Sub (or Sub-1, Sub-2 for multi-sub structures). Rate benchmarking is per-performer: prime labor benchmarked against prime's MSA, sub labor against sub's MSA. Sheet 1 adds a Performer Structure block below the assumption block documenting: prime name, sub name(s), sub work-share percentage, and the 4022(d) path claimed. Work-share percentage is what the agreements officer uses to justify the "significant participation" determination; carry it in the methodology memo.
 
 If the user provides per-milestone staffing, use it directly. If not, derive from scope heuristics:
 
@@ -350,33 +440,50 @@ Generate a multi-sheet .xlsx workbook using openpyxl. Run the recalc script (`py
 
 **Sheet 1: Cost Analysis Summary.** Milestones as rows. Columns: Phase, Duration, Should-Cost (Mid), Government Share, Performer Share, Proposed Price, Variance ($), Variance (%).
 
-**Assumption cell layout (Sheet 1, rows 1-9):**
+**Assumption cell layout (Sheet 1, rows 1-12).** Cell references are inlined in the label text so the model building the workbook cannot confuse row position with cell address:
+
 ```
-A1: "OT Cost Analysis Assumptions"       (bold, merged A1:B1)
-A2: "Burden Multiplier (Low)"            B2: 1.8    (blue font)
-A3: "Burden Multiplier (Mid)"            B3: 2.0    (blue font)
-A4: "Burden Multiplier (High)"           B4: 2.2    (blue font)
-A5: "Escalation Rate"                    B5: 0.025  (blue font, percentage)
-A6: "Productive Hours/Year"              B6: 1880   (blue font)
-A7: "Cost-Share Ratio (Performer)"       B7: 0.00   (blue font, percentage; 0 if no share)
-A8: "Consortium Fee Rate"                B8: 0.00   (blue font, percentage; 0 if direct)
-A9: (blank row separator)
-A10: header row for milestone data
-```
-
-All formulas reference these cells. Changing any assumption recalculates the entire workbook.
-
-**Summary table layout (starting row 10):**
-```
-Columns: A=Milestone ID | B=Phase | C=Description | D=Duration (mo) | E=Should-Cost (Mid) | F=Govt Share | G=Performer Share | H=Proposed Price | I=Variance ($) | J=Variance (%)
-
-Variance formula: =H[row]-E[row]
-Variance %: =IF(E[row]>0,(H[row]-E[row])/E[row],0)
-
-Totals row at bottom with SUM formulas for E through I.
+Row 1:  A1 "OT Cost Analysis Assumptions" (bold, merged A1:B1)
+Row 2:  A2 "Burden Multiplier Low [$B$2]"           B2: 1.8   (blue)
+Row 3:  A3 "Burden Multiplier Mid [$B$3]"           B3: 2.0   (blue)
+Row 4:  A4 "Burden Multiplier High [$B$4]"          B4: 2.2   (blue)
+Row 5:  A5 "Labor Escalation Rate [$B$5]"           B5: 0.025 (blue, %)
+Row 6:  A6 "Productive Hours/Year [$B$6]"           B6: 1880  (blue)
+Row 7:  A7 "Cost-Share Ratio Performer [$B$7]"      B7: 0.00  (blue, %; 0 if no share)
+Row 8:  A8 "Consortium Fee Rate [$B$8]"             B8: 0.00  (blue, %; 0 if direct)
+Row 9:  A9 "Materials Escalation Rate [$B$9]"       B9: 0.025 (blue, %; defense-electronics often 3-5%)
+Row 10: A10 "Cost-Type Ceiling Margin [$B$10]"      B10: 0.15 (blue, %; applies only to cost-type milestones)
+Row 11: (blank row separator)
+Row 12: header row for milestone data
 ```
 
-**Sheet 2: Milestone Detail.** One block per milestone showing the cost element breakdown:
+All formulas reference these cells. Changing any assumption recalculates the entire workbook. Freeze panes below row 11.
+
+**Materials escalation is separated from labor escalation** because BOM escalation rates differ structurally from wage escalation. Defense electronics BOMs have run 3-5%+ while labor escalation has been 2-3%. For a materials-dominant estimate, a single-knob escalation misstates the answer.
+
+**Materials escalation time-basis (required prescription).** Compound materials escalation per milestone using milestone-start month from PoP start, not per calendar year. Formula: `escalated_materials = base_materials × (1 + $B$9)^(months_from_PoP_start_to_milestone_start / 12)`. Labor escalation uses the same month-based compounding from the BLS data vintage date. Do not mix year-boundary escalation with month-based escalation across the workbook; pick one and state in methodology. The month-based approach is the default because milestones rarely start on FY boundaries.
+
+**Summary table layout (starting row 12):**
+```
+Columns: A=Milestone ID | B=Phase | C=Description | D=Duration (mo) | E=Payment Type | F=Should-Cost (Mid) | G=Ceiling (Cost-Type only) | H=Govt Obligation | I=Performer Share | J=Proposed Price | K=Variance ($) | L=Variance (%)
+
+Payment Type (E): "Fixed" or "Cost-Type" per milestone (blue font, user-editable)
+Ceiling (G): =IF(E[row]="Cost-Type", F[row]*(1+$B$10), "")
+Govt Obligation (H): =IF(E[row]="Cost-Type", F[row]*(1+$B$10)*(1-$B$7), F[row]*(1-$B$7))
+Performer Share (I): =IF(E[row]="Cost-Type", F[row]*(1+$B$10)*$B$7, F[row]*$B$7)
+Variance ($) (K): =IF(J[row]="","",J[row]-F[row])
+Variance (%) (L): =IF(OR(J[row]="",F[row]=0),"",(J[row]-F[row])/F[row])
+
+Totals row at bottom with SUM formulas for F through K.
+```
+
+**Critical: Performer Share must branch on Payment Type.** For cost-type milestones, the performer's share of financial exposure is against the ceiling, not against should-cost. If Performer Share uses `F*$B$7` while Govt Obligation uses `F*(1+$B$10)*(1-$B$7)` for cost-type, Sheet 1 totals will not reconcile with Sheet 5 cost-sharing detail, and the cost-share ratio documented in methodology will be wrong. Both H and I columns use the same IF branch.
+
+**Payment type rule.** For cost-type milestones, the government obligates at ceiling (should-cost × (1 + ceiling margin)), not at should-cost. The performer reports actuals against ceiling; any overrun past ceiling is the performer's exposure unless the agreement is modified. The funding profile on Sheet 5 MUST use ceiling for cost-type milestones so the FY obligation numbers reflect the maximum government exposure, not the optimistic estimate.
+
+**Sheet 2: Milestone Detail.** One block per milestone showing the cost element breakdown.
+
+**Deterministic block placement (required).** Variable labor category counts make fixed per-milestone block heights unreliable. Before writing any cross-sheet reference, compute each milestone's block size dynamically: `block_height = 6 (metadata + labor header/subtotal) + labor_rows + 3 (materials header/subtotal/blank) + materials_rows + 3 (travel) + travel_rows + 3 (ODC) + odc_rows + 4 (totals). Store each milestone's start_row and subtotal_row positions in a dict before writing Sheet 1 and Sheet 3 references. The alternative is to name each milestone's key cells (Should-Cost, Govt Obligation, Performer Share) with Excel defined names (e.g., `M1_should_cost`, `M1_ceiling`, `M1_govt_oblig`) and reference by name rather than by row number. Either approach works; what does NOT work is assuming a fixed row spacing.
 
 ```
 "Milestone [ID]: [Description]"                               (bold header)
@@ -489,7 +596,7 @@ Include as placeholder rows or methodology notes:
 - **Agreement terms and conditions** -- legal review required
 - **NDC eligibility determination** -- agreements officer determination per 10 USC 3014
 - **DCAA audit or indirect rate validation** -- not applicable to OTs with NDC performers
-- **Production follow-on cost estimates** -- if production follow-on under 4022(f) uses a FAR-based contract, use the appropriate IGCE Builder
+- **Production follow-on under FAR contract** -- only if the follow-on is issued as a FAR-based production contract rather than an OT, use the appropriate IGCE Builder. Production follow-on OTs under 10 USC 4022(f) ARE in scope for this skill (they are issued as OTs, not FAR contracts, and inherit the cost-share determination from the predecessor prototype agreement)
 - **Subcontractor cost analysis** -- requires separate estimate or sub-tier cost data
 - **OCONUS travel** -- per diem covers CONUS only; State Dept rates for OCONUS
 - **Grant budgets** -- use Grant Budget Builder
