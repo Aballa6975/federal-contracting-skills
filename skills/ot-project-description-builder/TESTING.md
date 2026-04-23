@@ -2,7 +2,7 @@
 
 ## The bottom line
 
-One testing wave in April 2026 across five end-to-end scenarios on Claude Opus 4.7 shipped 15 patches to the OT Project Description Builder. All 15 patches validated on regression across two post-patch runs that exercised untested territory (software prototype, consortium, path D competition commitment, research OT, traditional prime). No regressions, no new universal gaps.
+One testing wave in April 2026 across six end-to-end scenarios on Claude Opus 4.7 shipped 15 patches to the OT Project Description Builder. All 15 patches validated on regression across three post-patch runs that exercised untested territory (software prototype, consortium, path D competition commitment, research OT, traditional prime, and Workflow C scope reduction). No regressions, no new universal gaps. All three workflows (A full build, B document conversion, C scope reduction) are now covered.
 
 The skill reliably produces 10 USC 4021 and 4022 compliant project descriptions across prototype, research, and production-follow-on paths, with milestone-based payment structures, TRL-mapped phase progression, data rights handling, cost-sharing path selection, and a separate chat-only milestone handoff table for the OT Cost Analysis.
 
@@ -15,8 +15,9 @@ The skill reliably produces 10 USC 4021 and 4022 compliant project descriptions 
 | 3 | FAR-flavored SOW conversion with CLIN/cost contamination | 10 USC 4021 | Traditional, 4022(d)(1)(C) | B (conversion) |
 | 4 | NSTXL-brokered BAA white paper, software prototype | 10 USC 4021 + 4022(f) | Traditional with competition commitment, 4022(d)(1)(D) | B |
 | 5 | Cold-weather battery chemistry research | 10 USC 4021 (research) | Traditional, no cost-share required | A |
+| 6 | Autonomous resupply prototype, $18M priced, $11M approved, descope to fit budget | 10 USC 4021 | Traditional, 4022(d)(1)(C) | C (scope reduction) |
 
-All five runs produced contract-file-ready .docx outputs, emitted the Milestone Handoff Table as chat output only, and stopped at the Phase 2 Invocation Gate for user "proceed" before document generation.
+All six runs produced contract-file-ready .docx outputs, emitted the Milestone Handoff Table as chat output only, and stopped at the Phase 2 Invocation Gate for user "proceed" before document generation.
 
 ## What the skill got right on every run
 
@@ -57,18 +58,20 @@ Patches were applied in two sub-groups. Group 1 was cross-shipped from the SOW/P
 | Performance placeholder closeout mechanism for [TBD] thresholds in Section 3 Objectives, with default bilateral-modification disposition at Phase 1 CDR | Phase 2 Section 14 | Multiple runs invented disposition mechanisms; standardized here |
 | Body cross-references must use section titles rather than section numbers | Phase 2 Section Structure | Prevents broken refs when conditional sections are omitted and subsequent sections renumber |
 
-### Regression validation (Tests 4 and 5)
+### Regression validation (Tests 4, 5, and 6)
 
-Tests 4 and 5 exercised untested territory after all 15 patches landed. They were designed specifically to stress parts of the skill that Tests 1-3 didn't touch.
+Tests 4, 5, and 6 exercised untested territory after all 15 patches landed. They were designed specifically to stress parts of the skill that Tests 1-3 didn't touch.
 
 - **Test 4 (BAA conversion, consortium, path D, software, late TRL 5-7):** Every Group 2 patch that could fire did fire correctly. The conditional handoff message used the no-cost-share variant. The Document Review Checklist emitted as 11 items in chat. Cross-reference patch held (no numbered refs in body). Source-doc cost stripping wrote "None. White paper contained no cost figures" to the handoff, demonstrating the rule holds even when there is nothing to strip.
 - **Test 5 (Research OT, traditional prime, 30 months):** Skill correctly identified that 10 USC 4022(d) cost-sharing paths do not apply to 10 USC 4021 research authority and omitted Section 12. Cost-share arithmetic question did not fire because the statutory framework makes it inapplicable (the correct behavior, not a miss). Go/no-go criteria carried through as placeholder thresholds with stated disposition.
+- **Test 6 (Workflow C scope reduction, traditional prime, path C cost-share):** Skill correctly routed to Workflow C. The cost-share arithmetic disambiguation patch, originally written for Workflow B, generalized cleanly to Workflow C and fired as a blocking question with three specific arithmetic interpretations (total value, government share, or pre-share performer quote) and correct math for each. The source-doc cost stripping rule also generalized: original $18M baseline and $11M approved funding carried into the Milestone Handoff Table as "informational only, do not anchor should-cost estimate" rather than leaking into the regenerated document body. Document Review Checklist, Phase 2 Invocation Gate, conditional handoff message (cost-share variant), and [TBD] placeholder closeout all fired correctly. Model also showed useful domain judgment beyond skill rules (flagged NTC as TRL 7 operational and redirected to YPG for TRL 6 relevant environment, presented descope trade-offs as ranked packages A/B/C with risk levels). Those judgment moves were not patch-worthy.
 
-No regressions observed. No new universal gaps surfaced.
+No regressions observed across any of the three regression tests. No new universal gaps surfaced.
+
+**Cross-workflow patch generalization.** Two Group 2 patches originally written for Workflow B (cost-figure stripping, cost-share arithmetic disambiguation) generalized to Workflow C without modification. This is the pattern we want: universal rules that apply wherever source cost data and path (C) math appear, not workflow-specific hedges.
 
 ## What was not tested
 
-- **Workflow C (scope reduction)** for OT project descriptions. One test was drafted but not run in this wave. The skill defines Workflow C but its universal patches have not been regression-tested against a real scope-reduction conversation.
 - **Production follow-on OT as primary workflow.** Tests 2 and 4 included 10 USC 4022(f) provisions as an option, but neither run structured the agreement as a production follow-on.
 - **Consortium-specific templates.** Test 4 used NSTXL as the broker; DIU, AFWERX, NavalX, SOSSEC, and MTEC consortium variations have not been exercised.
 - **Small business performer path (10 USC 4022(d)(1)(B)).** Tests covered NDC (path A), traditional with competition commitment (path D), traditional with cost-share (path C), and research (no 4022(d) applicability). Small-business significant participation was not tested.
@@ -80,7 +83,7 @@ Users in these contexts should expect to validate outputs more carefully and may
 
 ## Testing methodology
 
-Five live runs on Claude Opus 4.7 via claude.ai web chat and Claude Code, the same environments the skill's end users run in.
+Six live runs on Claude Opus 4.7 via claude.ai web chat and Claude Code, the same environments the skill's end users run in.
 
 Evaluator grading was done by a separate Claude Opus 4.7 instance with access only to the skill text and the worker's final output transcript. Grading focused on three questions per run:
 
@@ -106,7 +109,7 @@ Evaluator: James Jenrette (1102tools) and Claude Code Opus 4.7 (1M context windo
 
 Worker model tested: Claude Opus 4.7 on claude.ai web chat and Claude Code, the same environments the skill's end users run in.
 
-Wave: 5 runs, 15 patches shipped, 2 post-patch regression runs with zero new gaps surfaced.
+Wave: 6 runs, 15 patches shipped, 3 post-patch regression runs with zero new gaps surfaced. All three workflows (A, B, C) covered.
 
 Date: April 2026.
 
