@@ -230,11 +230,11 @@ Between Wave 3 and Wave 4, the skill substrate was migrated from three Python L1
 
 The FFP skill was reduced from 702 to 649 lines at migration by stripping defensive text that the MCPs now obviate (CALC+ `q=` vs `keyword=` trap, `aggregations.wage_stats` JSON-path archaeology, 25-char BLS series ID assembly, manual 75% M&IE math). Wave 4 tested the reduced skill against the same substrate-free scenarios.
 
-All three rounds ran in Claude Code CLI on Claude Desktop, against the local `~/.claude/skills/igce-builder-ffp/skill.md`. An earlier attempt on Claude Desktop chat surfaced a 4-minute hang on the bls-oews MCP's `detect_latest_year` probe; the same probe returned in milliseconds from Claude Code on the same machine, localizing the bug to Claude Desktop's MCP client rather than the server. All 8 federal MCPs were verified healthy from Claude Code.
+All three rounds ran in Claude Code CLI on Claude Desktop, against the local `~/.claude/skills/igce-builder-ffp/SKILL.md`. An earlier attempt on Claude Desktop chat surfaced a 4-minute hang on the bls-oews MCP's `detect_latest_year` probe; the same probe returned in milliseconds from Claude Code on the same machine, localizing the bug to Claude Desktop's MCP client rather than the server. All 8 federal MCPs were verified healthy from Claude Code.
 
 ### Methodology
 
-Each round ran a single scenario in a fresh Claude Code conversation. The worker built the workbook end-to-end. An independent Opus 4.7 grader (separate Claude Code session) then reviewed the produced workbook, read the skill.md, and reported findings covering both skill defects and execution gaps. Fixes were applied to skill.md between rounds.
+Each round ran a single scenario in a fresh Claude Code conversation. The worker built the workbook end-to-end. An independent Opus 4.7 grader (separate Claude Code session) then reviewed the produced workbook, read the SKILL.md, and reported findings covering both skill defects and execution gaps. Fixes were applied to SKILL.md between rounds.
 
 Scenarios were chosen to escalate from baseline to judgment-heavy:
 - **R1:** S1 DC dev team FFP-by-period (3 FTE, GSA MAS commercial, base + 2 OY, no travel)
@@ -294,11 +294,11 @@ Workbook built cleanly. Mid total ~$2.94M, DoE M&O multiplier 3.18x confirmed. S
 | Skill defects identified by evaluator | 18 |
 | Skill defects fixed between rounds | 18 |
 | Platform-layer substitution reports (not skill bugs) | 3 |
-| Line delta: skill.md post-Wave-3 (702) → post-Wave-4-fixes | 689 |
+| Line delta: SKILL.md post-Wave-3 (702) → post-Wave-4-fixes | 689 |
 
 ### Platform-level finding (not actionable in the skill)
 
-Three consecutive rounds reported `$B<prompt-word>` substitution tokens in the Step 8 Sheet 2 block layout (e.g., `$Bdevelopment`, `$Byears`, `$Banalyst`, `$BOYs`, `$Bfeasibility`, `$Bscope`). Grep of the skill.md source returned zero matches each time; the file contains literal integer cell addresses (`$B$2`, `$B$12`, etc.). Two plausible root causes:
+Three consecutive rounds reported `$B<prompt-word>` substitution tokens in the Step 8 Sheet 2 block layout (e.g., `$Bdevelopment`, `$Byears`, `$Banalyst`, `$BOYs`, `$Bfeasibility`, `$Bscope`). Grep of the SKILL.md source returned zero matches each time; the file contains literal integer cell addresses (`$B$2`, `$B$12`, etc.). Two plausible root causes:
 
 - **Claude Code skill-loader substitution:** the loader may apply a template-style substitution on `$VAR`-shaped tokens in the skill markdown before handing it to the model.
 - **Evaluator model hallucination:** the evaluator reads the cell addresses correctly but, when describing the substitution failure mode warned about in the guardrail, confabulates examples that match the pattern.
@@ -319,7 +319,7 @@ These are queued for Wave 5.
 
 ### Fixes shipped cumulatively in Wave 4
 
-All 18 fixes ship together in the current `skill.md` at the head of this testing record. Chronological order (Round 1 → Round 3):
+All 18 fixes ship together in the current `SKILL.md` at the head of this testing record. Chronological order (Round 1 → Round 3):
 
 1. BLS datatype list updated (dropped invalid 02/05)
 2. Step 9 environment-aware with Claude Code CLI fallback
@@ -405,7 +405,7 @@ Separate from findings, a new pre-flight block was added at the top of the skill
 
 ### Platform-level finding (cemented)
 
-Four consecutive rounds across Waves 4 and 5 have reported `$B<prompt-word>` substitution tokens in the Step 8 block layout (examples: `$Bdevelopment`, `$Byears`, `$Banalyst`, `$BOYs`, `$Bfeasibility`, `$Bscope`, `$BFFP`, `$BIGCE`, `$Bpriced`, `$Bper`, `$Bof`). Every token maps to a word from the session's user prompt. Grep of skill.md source returns zero matches every time. Root cause is in the Claude Code skill-loader substitution pipeline OR a consistent evaluator hallucination pattern keyed off the block-layout template. Not fixable in the skill. Mitigation in place: example-token-bearing guardrail text was removed; literal `$B$2` / `$B$12` notation retained.
+Four consecutive rounds across Waves 4 and 5 have reported `$B<prompt-word>` substitution tokens in the Step 8 block layout (examples: `$Bdevelopment`, `$Byears`, `$Banalyst`, `$BOYs`, `$Bfeasibility`, `$Bscope`, `$BFFP`, `$BIGCE`, `$Bpriced`, `$Bper`, `$Bof`). Every token maps to a word from the session's user prompt. Grep of SKILL.md source returns zero matches every time. Root cause is in the Claude Code skill-loader substitution pipeline OR a consistent evaluator hallucination pattern keyed off the block-layout template. Not fixable in the skill. Mitigation in place: example-token-bearing guardrail text was removed; literal `$B$2` / `$B$12` notation retained.
 
 ### What has not been tested
 
@@ -453,7 +453,7 @@ The skill had accumulated cruft from prior waves. Trimmed in Wave 6:
 
 ### Line delta
 
-skill.md: 897 → 854 (-43 lines).
+SKILL.md: 897 → 854 (-43 lines).
 
 ### Status
 
