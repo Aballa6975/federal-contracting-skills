@@ -54,7 +54,7 @@ The orchestration skills in this repo stay as skills. Their value is decision tr
 
 1. Install [Claude Desktop](https://claude.ai/download).
 2. Install the MCPs you need from [federal-contracting-mcps](https://github.com/1102tools/federal-contracting-mcps) (one-click, `.mcpb` files).
-3. Download a skill folder from this repo. In Claude Desktop: **Customize > Skills > + > Create skill > Upload a skill**. Drag in each `SKILL.md` file individually.
+3. Download a skill folder from this repo. In Claude Desktop: **Customize > Skills > + > Create skill > Upload a skill**. Drag in each `skill.md` file individually.
 4. Ask naturally. The skill reads its instructions and calls the MCP tools.
 
 ## License

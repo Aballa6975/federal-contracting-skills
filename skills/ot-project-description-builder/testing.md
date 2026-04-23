@@ -99,7 +99,7 @@ Skill line count: 408 before the wave, 440 after all 15 patches (+32 lines net o
 
 Skill version lines: 408 before patches, 440 after. Ceiling remains 1,000.
 
-All 15 patches are live in the current SKILL.md.
+All 15 patches are live in the current skill.md.
 
 ---
 

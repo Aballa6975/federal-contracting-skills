@@ -351,7 +351,7 @@ All five were considered and deliberately dropped per the universal-only + "patc
 
 ### Wave 5 line delta
 
-SKILL.md: 832 → 859 lines (+27 across all 3 Wave 5 patches: DCAA override +~10, Workflow B gate unconditional fire +~5, Gate 3 correctness fix +~12). Ceiling remains 1,000.
+skill.md: 832 → 859 lines (+27 across all 3 Wave 5 patches: DCAA override +~10, Workflow B gate unconditional fire +~5, Gate 3 correctness fix +~12). Ceiling remains 1,000.
 
 ### Wave 5 regression summary
 

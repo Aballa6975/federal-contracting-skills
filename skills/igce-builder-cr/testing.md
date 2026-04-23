@@ -67,7 +67,7 @@ Each scenario had a 14-point binary assertion matrix covering skill activation, 
 ### Environment
 
 - Claude Code CLI, fresh conversation per scenario, Opus 4.7
-- Local `~/.claude/skills/igce-builder-cr/SKILL.md` post-Wave 1 inheritance
+- Local `~/.claude/skills/igce-builder-cr/skill.md` post-Wave 1 inheritance
 - All three scenarios completed in a single worker pass without "continue" (post-inheritance skill was slim enough)
 
 ### Grading

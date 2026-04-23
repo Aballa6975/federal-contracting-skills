@@ -12,7 +12,7 @@ Thanks for your interest in improving these tools.
 
 1. Fork the repo
 2. Create a branch for your change
-3. Edit the relevant SKILL.md file(s)
+3. Edit the relevant skill.md file(s)
 4. Update the version number and add a changelog entry
 5. Open a pull request with a clear description of what changed and why
 
