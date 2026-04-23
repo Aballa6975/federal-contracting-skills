@@ -278,6 +278,46 @@ Wave 1 testing record produced under consistent methodology:
 
 **Wave 4** (Universal patches inherited from CR Wave 2 detailed-prompt round): Same 11 universal patches ported to LH/T&M identically to FFP. See Wave 7 on FFP testing record for full list. Status: inherited, not re-tested on LH/T&M directly.
 
+## Wave 5 (2 cold tests completed, 2 rate-limited; 2 universal patches shipped)
+
+Wave 5 was a targeted wave driven by two objectives: (1) port horizontal findings from CR Wave 4, and (2) exercise untested territory from Wave 2/3 "What has NOT been tested" list. Four cold tests were launched simultaneously; two completed before Anthropic rate limits cut off the other two.
+
+### Tests run
+
+| # | Scenario | Workflow | Purpose | Status |
+|---|---|---|---|---|
+| 1 | Lockheed NSA Fort Meade cyber ops, CO-supplied FPRA 2.68 | LH | CR Wave 4 horizontal port validation (DCAA/FPRA override rule) | Completed |
+| 2 | DISA 24x7 SOC + $680K/yr pass-through materials | T&M | 24x7 Step 0.5 math on T&M (untested) | Rate-limited |
+| 3 | USCIS ELIS modernization from raw SOW | LH (A+) | Workflow A+ SOW decomposition (untested) | Rate-limited |
+| 4 | Senior Red Team Operator $285/hr DC "is this reasonable" | Workflow B | ai-boundaries v2 gate + Option A/B (untested on LH/T&M) | Completed |
+
+### Findings and patches shipped (2)
+
+| # | Patch | Section affected | Trigger | Horizontal? |
+|---|---|---|---|---|
+| 1 | **CO-supplied DCAA-audited rates override rule** (use FPRA verbatim; do NOT bookend ±0.2 around an audited rate; document source in Methodology) | Contract Vehicle Usage Rule section | Test 1 confirmed the CR Wave 4 gap is universal: "DCAA" / "FPRA" do not appear anywhere in LH/T&M. Generic custom-burden rule handles the input but semantically treats the audited rate as a midpoint, not an authoritative point estimate. | Yes — CR Wave 4 port |
+| 2 | **Workflow B gate fires unconditionally on entry** (prior gate was token-gated; a prompt like "validate these rates" bypassed the gate and skipped the Option A/B choice) | Step 0 Workflow B gate | Test 4 surfaced a universal silent-bypass path: Workflow B triggers ("validate these rates," "check this proposal") do NOT contain Step 0 gate tokens ("memo," "determination," "fair and reasonable," etc.), so a worker routes to Workflow B → Step 0 → scan finds nothing → waves through to analysis without ever presenting the Option A/B refusal template. | New (LH/T&M-originated) |
+
+### Other observations from Test 4 (considered but NOT patched per universal-only discipline)
+
+- **"Reasonable" (standalone) not on memo-drafting token list.** Test 4 worker observed the word "reasonable" alone is not in the token list (only "fair and reasonable," "price reasonableness," "reasonableness memo" are). Substring matching made the gate fire anyway. Addressed by the Patch 2 gate-fires-unconditionally rewrite plus expanding the memo-drafting token list to include "reasonable" (standalone), "validate," "acceptable," "justify."
+- **Three duplicated lists of prohibited evaluative verbs** (Operating Principle, Step 0 hard prohibitions, Step 6 stop) could be consolidated. Skipped: editorial cleanup, not a correctness gap; three reinforcing lists are a feature, not a bug.
+- **MCP output field `outlier_bounds_2sigma` passes through unfiltered.** MCP-side naming, not skill narrative. Too narrow to warrant skill-level guidance.
+
+### Findings from Test 1 bundled into the DCAA override patch
+
+- **Low/High bookending semantics when CO rate is authoritative.** The ±0.2 bookending produces fictional scenario display when the CO supplies an audited rate (DCAA FPRA 2.68 IS the rate, not a midpoint). Patch 1 explicitly states: apply as point estimate (single column); if a band is still shown, label as "sensitivity display only; FPRA is authoritative."
+- **Methodology source-citation for overridden defaults.** Patch 1 requires documenting FPRA effective date, approving authority, rate composition.
+- **Divergence between CO-supplied rate and vehicle-table band.** Patch 1 states: trust the CO-supplied rate and note the divergence in Methodology rather than reconciling to the table.
+
+### What was NOT regressed this wave (rate limit constraint)
+
+The customary regression step (4 cold agents validating patches hold against post-patch skill) could not run because the two outstanding cold tests (24x7 T&M, Workflow A+ SOW) hit Anthropic rate limits and the MCP servers (bls-oews, gsa-calc, gsa-perdiem) disconnected mid-wave. Both patches are conservative additions (Patch 1 is a new paragraph that augments the existing custom-burden rule; Patch 2 removes a silent-bypass path in the gate without changing downstream Steps 1-5 behavior). No existing tests were observed to regress, but full cold regression across CPFF / CPAF / CPIF-style variant coverage is deferred until Wave 6.
+
+### Wave 5 line delta
+
+SKILL.md: 832 → 855 lines (+23). Ceiling remains 1,000.
+
 ---
 
 *Testing record prepared April 2026 by James Jenrette / 1102tools. Independent grading methodology. MIT licensed. Source: github.com/1102tools/federal-contracting-skills.*

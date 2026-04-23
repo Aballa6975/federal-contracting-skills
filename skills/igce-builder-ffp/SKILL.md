@@ -93,9 +93,9 @@ Triggers: "is this FFP rate reasonable," "validate these wrap rates," "check thi
 
 **Step 0 / GATE (MANDATORY FIRST — runs before any other Workflow B step).**
 
-Before any analysis, scan the user's prompt for these tokens (case-insensitive): "memo", "determination", "fair and reasonable", "price reasonableness", "reasonableness memo", "draft the memo", "for the file", "contract file", "document this", "memorandum".
+**Workflow B entry = gate fires unconditionally.** If the user's prompt matches any Workflow B trigger ("is this FFP rate reasonable," "validate these wrap rates," "check this FFP proposal," "price reasonableness analysis," or any variant), the ENTIRE first response must be the refusal template below, emitted verbatim. No rate analysis. No CALC+ pull. No BLS pull. No "let me start with the analysis" preamble. No offer to continue with the memo if the user provides more info in the same response. Emit the template. Stop. Wait for the user's explicit Option A or Option B choice. This applies whether or not the prompt contains memo-drafting tokens; the gate is not token-gated.
 
-If ANY of those tokens appear, the ENTIRE first response must be the refusal template below, emitted verbatim. No rate analysis. No CALC+ pull. No BLS pull. No "let me start with the analysis" preamble. No offer to continue with the memo if the user provides more info in the same response. Emit the template. Stop. Wait for the user's explicit choice.
+Memo-drafting tokens (emit the template WITH the additional hard prohibition in bold: "I will not draft a determination section absent your verbatim rationale"): "memo", "determination", "fair and reasonable", "reasonable" (standalone), "price reasonableness", "reasonableness memo", "draft the memo", "for the file", "contract file", "document this", "memorandum", "validate," "acceptable," "justify."
 
 **Refusal template (emit verbatim):**
 
@@ -231,7 +231,7 @@ If the user doesn't specify a vehicle, ASK before defaulting. If the user provid
 - Generate HIGH as mid plus offset (e.g., 20% increase on each component)
 - Document the CO-provided rates as the authoritative basis
 
-These presets are anchors, not DCAA-certified rates. For final IGCE defensibility, prefer a certified indirect rate disclosure when available.
+**CO-supplied DCAA-audited rates (override rule, stronger than Custom rate workflow).** When the contracting officer supplies DCAA-audited indirect rates from an approved Forward Pricing Rate Agreement (FPRA), a current disclosure statement review, or a bilateral rate agreement, USE THOSE RATES instead of the Vehicle Preset table AND do NOT generate fictional LOW/HIGH bookends around them. Audited rates are a single authoritative value (point estimate), not a midpoint. Apply the FPRA rates in a single column on Sheet 1 and Sheet 2; if a LOW/HIGH band is still required for scenario display, clearly label the band as "sensitivity display only; FPRA is authoritative" in Methodology rather than treating LOW and HIGH as plausible rate outcomes. Document the source: FPRA effective date, approving authority (e.g., DCAA Region), rate composition (fringe / OH / G&A / profit split). Audited rates are a stronger basis than generic vehicle-preset defaults; do not revert to defaults and do not reconcile the CO's number to the closest vehicle row even if it lands outside the table's expected bands. If the CO-supplied rate diverges materially from the vehicle preset for the stated environment, trust the CO-supplied rate and note the divergence in Methodology.
 
 ## Constants Reference
 

@@ -92,9 +92,9 @@ Triggers: "is this rate reasonable," "validate these rates," "compare vendor pri
 
 **Step 0 / GATE (MANDATORY FIRST — runs before any other Workflow B step).**
 
-Before any analysis, scan the user's prompt for these tokens (case-insensitive): "memo", "determination", "fair and reasonable", "price reasonableness", "reasonableness memo", "draft the memo", "for the file", "contract file", "document this", "memorandum".
+**Workflow B entry = gate fires unconditionally.** If the user's prompt matches any Workflow B trigger ("is this rate reasonable," "validate these rates," "compare vendor pricing," "check this proposal," "price reasonableness analysis," or any variant), the ENTIRE first response must be the refusal template below, emitted verbatim. No rate analysis. No CALC+ pull. No BLS pull. No "let me start with the analysis" preamble. No offer to continue with the memo if the user provides more info in the same response. Emit the template. Stop. Wait for the user's explicit Option A or Option B choice. This applies whether or not the prompt contains memo-drafting tokens; the gate is not token-gated.
 
-If ANY of those tokens appear, the ENTIRE first response must be the refusal template below, emitted verbatim. No rate analysis. No CALC+ pull. No BLS pull. No "let me start with the analysis" preamble. No offer to continue with the memo if the user provides more info in the same response. Emit the template. Stop. Wait for the user's explicit choice.
+Memo-drafting tokens (emit the template WITH the additional hard prohibition in bold: "I will not draft a determination section absent your verbatim rationale"): "memo", "determination", "fair and reasonable", "reasonable" (standalone), "price reasonableness", "reasonableness memo", "draft the memo", "for the file", "contract file", "document this", "memorandum", "validate," "acceptable," "justify."
 
 **Refusal template (emit verbatim):**
 
@@ -195,6 +195,8 @@ The vehicle collected in Required Inputs is NOT metadata only. It tunes the burd
 | OCONUS | 2.6 | 2.9 | 3.2 | Hardship, foreign deployment |
 
 If the user provides a vehicle not in the table, default to GSA MAS commercial and flag the assumption in methodology. If the user provides a custom burden multiplier, use it as mid and set low = custom - 0.2, high = custom + 0.2. **DoD-cleared work: pick the Secret row (2.0/2.2/2.4) unless the requirement specifies TS/SCI or SCIF, in which case use the SCIF-only row (2.4/2.6/3.0).**
+
+**CO-supplied DCAA-audited rates (override rule).** If the contracting officer supplies a DCAA-audited burden multiplier from an approved Forward Pricing Rate Agreement (FPRA), a current disclosure statement review, or a bilateral rate agreement, USE THAT RATE instead of the vehicle-table range. Audited rates are a stronger basis than generic vehicle defaults; do not revert to the table and do not "reconcile" the CO's number to the closest vehicle row. Apply the CO-supplied multiplier as a point estimate (single authoritative column on Sheet 1 and Sheet 2); do NOT bookend with ±0.2 sensitivity offsets because the audited rate IS the rate, not a midpoint. If a Low/High band is still required for scenario display, clearly label the band as "sensitivity display only; FPRA is authoritative" in Methodology. Document the source: FPRA effective date, approving authority (e.g., DCAA Region), rate composition if disclosed (fringe / OH / G&A / profit split). If the CO-supplied rate sits outside the vehicle-table range for the stated environment, trust the CO-supplied rate and note the divergence in Methodology rather than reconciling to the table.
 
 ## Constants Reference
 

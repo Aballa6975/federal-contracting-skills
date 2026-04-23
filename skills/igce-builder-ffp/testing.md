@@ -478,6 +478,18 @@ The Wave 1 and Wave 2 testing records were produced under a consistent methodolo
 
 **Wave 8** (Universal patches inherited from CR Wave 2 detailed-prompt round): 11 universal-principle patches ported to FFP from CR detailed-prompt testing. Includes page_size=0 update, 24x7 math reconciliation, DATEDIF real-date fix, day-trip M&IE correctness fix (was shipping 25% low), aged-wage row explicit, Sheet 2/Sheet 1 unit clarity, flat-tail detection, 6 DoD/DOE test ranges added to installation crosswalk, SOC 17-2199 fallback, same-metro TDY check, stacked factors definition. Status: inherited, not re-tested on FFP directly.
 
+## Wave 9 (universal patches inherited from CR Wave 4 + LH/T&M Wave 5)
+
+**Wave 9** (Universal patches ported from CR Wave 4 DCAA/FPRA override + LH/T&M Wave 5 Workflow B gate hardening). Two patches shipped to FFP identically to the LH/T&M Wave 5 pair:
+
+1. **CO-supplied DCAA-audited rates override rule** (enhancement to existing Custom rate workflow). Adds explicit language: use FPRA rates as point estimate, do NOT bookend ±20% around an audited rate (the audited rate IS the rate, not a midpoint), document FPRA effective date and approving authority in Methodology. Trust CO-supplied rate over vehicle-preset band even when they diverge; note divergence in Methodology rather than reconciling to the table. This closes the gap from CR Wave 4 Test 2 (FEMA Booz Allen FPRA) and LH/T&M Wave 5 Test 1 (Lockheed NSA Fort Meade FPRA) which both showed skills treating audited rates as midpoints rather than point estimates.
+
+2. **Workflow B gate fires unconditionally on entry** (bypass fix). Prior gate was token-gated: a prompt like "validate these wrap rates" would route to Workflow B → Step 0 → scan finds none of the listed tokens ("memo," "determination," "fair and reasonable," etc.) → waves through to Steps 1-5 without presenting the Option A/B refusal template. LH/T&M Wave 5 Test 4 surfaced this as a universal silent-bypass; same path existed in FFP (FFP Workflow B triggers at line 92 include "validate these wrap rates" and "check this FFP proposal," neither of which match the Step 0 token list). Patch makes the gate fire unconditionally on Workflow B entry, with additional hard prohibitions added when memo-drafting tokens also appear (expanded list: "reasonable" standalone, "validate," "acceptable," "justify").
+
+**Status:** both patches inherited from LH/T&M Wave 5. Wave 5 tested DCAA/FPRA on LH/T&M directly and the Workflow B gate on LH/T&M directly; FFP carries the same structural pattern and the patches apply identically. Regression on FFP is deferred to Wave 10.
+
+**Line delta:** 854 → 880 (+26). Ceiling remains 1,000.
+
 ---
 
 *Testing record prepared April 2026 by James Jenrette / 1102tools. Independent grading methodology. MIT licensed. Source: github.com/1102tools/federal-contracting-skills.*
